@@ -1,3 +1,4 @@
+
 # Quick Basket Customer Support Assistant
 
 A lightweight conversational AI agent for e-commerce customer support, built using pretrained local models.
@@ -86,3 +87,5 @@ Assistant: Our stores are open Monday-Saturday, 9 AM to 9 PM. Would you like to 
 - Add confidence score display
 - Implement multi-turn conversation handling 
 
+
+# QuickBasket
