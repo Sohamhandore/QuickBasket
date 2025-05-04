@@ -1,0 +1,44 @@
+User_Query,Intent
+Where is my order?,Order Tracking
+I want to return my shoes,Return & Refund Policy
+Are these jeans available in medium size?,Product Availability
+What are your store hours?,Store Location/Hours
+Hi I need help,General Greetings
+Can I get a discount on bulk orders?,Unknown/Other
+How long does delivery take?,Order Tracking
+How do I return a damaged item?,Return & Refund Policy
+Do you have iPhone cases in stock?,Product Availability
+Is there a store near me?,Store Location/Hours
+Hello!,General Greetings
+Bye thanks for your help,General Greetings
+Do you have customer support number?,Unknown/Other
+My parcel hasn't arrived yet,Order Tracking
+I want to cancel my order,Return & Refund Policy
+Can I pick up the item from your warehouse?,Store Location/Hours
+Do you sell Samsung smartwatches?,Product Availability
+Good morning,General Greetings
+When will I get my refund?,Return & Refund Policy
+How do I get my money back?,Return & Refund Policy
+What's your refund policy?,Return & Refund Policy
+Can I get a refund?,Return & Refund Policy
+How long does refund take?,Return & Refund Policy
+I want my money back,Return & Refund Policy
+Is my refund processed?,Return & Refund Policy
+When will the refund appear in my account?,Return & Refund Policy
+How to return and get refund?,Return & Refund Policy
+What's the return window?,Return & Refund Policy
+Can I return after 30 days?,Return & Refund Policy
+What's your return process?,Return & Refund Policy
+How to initiate a return?,Return & Refund Policy
+Do you offer full refunds?,Return & Refund Policy
+Is shipping free for returns?,Return & Refund Policy
+What's your return shipping policy?,Return & Refund Policy
+Do I need original packaging for return?,Return & Refund Policy
+Can I return used items?,Return & Refund Policy
+What's your return address?,Return & Refund Policy
+How to track my return?,Return & Refund Policy
+Do you accept international returns?,Return & Refund Policy
+What's your return label process?,Return & Refund Policy
+Can I exchange instead of return?,Return & Refund Policy
+Do you offer store credit for returns?,Return & Refund Policy
+What's your restocking fee policy?,Return & Refund Policy 

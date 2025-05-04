@@ -1,0 +1,8 @@
+transformers==4.51.3
+--find-links https://download.pytorch.org/whl/torch_stable.html
+torch==2.7.0
+pandas==2.2.3
+scikit-learn==1.6.1
+numpy==2.2.5
+streamlit==1.44.1
+python-dotenv==1.0.1 
