@@ -1,91 +1,106 @@
 
-# Quick Basket Customer Support Assistant
+---
 
-A lightweight conversational AI agent for e-commerce customer support, built using pretrained local models.
+# QuickBasket – AI Assistant for Customer Support
 
-## Features
+A streamlined conversational AI tool designed to assist customers in an e-commerce setting, leveraging locally hosted pre-trained models.
 
-- Intent Recognition using DistilBERT
-- Context-aware responses
-- Simple chat interface using Streamlit
-- Support for 6 predefined intents:
-  - Order Tracking
-  - Return & Refund Policy
-  - Product Availability
-  - Store Location/Hours
-  - General Greetings
-  - Unknown/Other
+## 🔧 Key Capabilities
 
-## Installation
+* Intent detection using DistilBERT
+* Context-sensitive replies
+* Streamlit-based minimalist chat interface
+* Handles six core user intents:
 
-1. Clone this repository
-2. Install the required dependencies:
+  * Track My Order
+  * Returns & Refunds
+  * Check Product Availability
+  * Store Timings & Location
+  * Greetings & Small Talk
+  * Unrecognized or Miscellaneous Queries
+
+## 🚀 Getting Started
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/your-username/your-repo-name.git
+```
+
+### 2. Install project dependencies
+
 ```bash
 pip install -r requirements.txt
 ```
 
-## Usage
+## 💬 How to Use
 
-1. Run the Streamlit app:
+### 1. Launch the application
+
 ```bash
 streamlit run app.py
 ```
 
-2. Open your web browser and navigate to the URL shown in the terminal (usually http://localhost:8501)
+### 2. Access the app in your browser
 
-3. Start chatting with the assistant!
+Typically available at: `http://localhost:8501`
 
-## Model Architecture
+### 3. Chat and explore its responses!
 
-- Base Model: DistilBERT (distilbert-base-uncased)
-- Fine-tuned for intent classification
-- Uses a simple rule-based response system
-- Implements basic context handling for product-related queries
+## 🧠 Under the Hood
 
-## Sample Conversations
+* **Model**: DistilBERT (`distilbert-base-uncased`)
+* Fine-tuned for intent classification tasks
+* Response mechanism based on a rule-based system
+* Context management for product-related interactions
 
-1. Order Tracking:
+## 💡 Example Interactions
+
+### ➤ Order Inquiry
+
 ```
 User: Where is my order?
-Assistant: Please share your order ID to help track your package.
+Bot: Kindly provide your order ID so I can track it for you.
 ```
 
-2. Product Availability with Context:
-```
-User: Do you have Nike shoes in stock?
-Assistant: Regarding nike, I can help you check product availability. Which item are you looking for?
-```
+### ➤ Availability with Context Awareness
 
-3. Store Hours:
 ```
-User: What are your store hours?
-Assistant: Our stores are open Monday-Saturday, 9 AM to 9 PM. Would you like to find the nearest store?
+User: Do you have Nike shoes?
+Bot: I can assist you with checking nike's availability. Could you specify the product?
 ```
 
-## Libraries Used
+### ➤ Store Hours
 
-- transformers: For the DistilBERT model
-- torch: For deep learning operations
-- pandas: For data handling
-- scikit-learn: For data preprocessing and model evaluation
-- streamlit: For the web interface
-- numpy: For numerical operations
+```
+User: What time do you open?
+Bot: We’re open from 9 AM to 9 PM, Monday through Saturday. Need help finding your nearest store?
+```
 
-## Limitations
+## 🧰 Tech Stack
 
-- Limited to predefined intents
-- Basic context handling
-- No persistent storage
-- Limited training data
+* `transformers`: for leveraging DistilBERT
+* `torch`: for model operations
+* `pandas`: for structured data manipulation
+* `scikit-learn`: preprocessing and evaluation
+* `streamlit`: UI for interaction
+* `numpy`: numerical computations
 
-## Future Improvements
+## ⚠️ Known Limitations
 
-- Add more training data
-- Implement more sophisticated context handling
-- Add product search functionality
-- Improve response generation
-- Add confidence score display
-- Implement multi-turn conversation handling 
+* Supports only fixed set of intents
+* Context memory is basic
+* Lacks persistent chat history
+* Model trained on limited data
 
+## 🚧 Planned Enhancements
 
-# QuickBasket
+* Expand the intent dataset
+* Enhance context tracking across multiple messages
+* Integrate a product search engine
+* Smarter response formulation
+* Display confidence levels
+* Enable support for multi-turn conversations
+
+---
+
