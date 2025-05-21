@@ -20,154 +20,206 @@ st.set_page_config(
 # Custom CSS
 st.markdown("""
     <style>
+    /* Import Google Fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Montserrat:wght@400;500;600;700&display=swap');
+
     /* Root Layout */
     .main {
         padding: 2rem;
-        background-color: #0A0A1F;
+        background-color: #FFF8E7;
+        font-family: 'Poppins', sans-serif;
     }
 
-    .stTextInput > div > div > input {
-        border-radius: 20px;
-        padding: 10px 20px;
-        color: #F0F8FF;
-        background-color: #1B1B3A;
-        border: 1px solid #00FFFF;
-        transition: border-color 0.3s ease-in-out;
-    }
-
-    .stTextInput > div > div > input:hover {
-        border-color: #FF00FF;
-    }
-
-    .chat-message {
-        padding: 1.5rem;
-        border-radius: 10px;
-        margin-bottom: 1rem;
-        display: flex;
-        flex-direction: column;
-        color: #F0F8FF;
-        transition: transform 0.2s ease;
-    }
-
-    .chat-message:hover {
-        transform: scale(1.02);
-    }
-
-    .chat-message.user {
-        background-color: #151538;
-        border-left: 5px solid #00FFFF;
-    }
-
-    .chat-message.assistant {
-        background-color: #1F1F4D;
-        border-left: 5px solid #FF00FF;
-    }
-
-    .chat-message .content {
-        margin-top: 0.5rem;
-        color: #F0F8FF;
-        animation: fadeInUp 1s ease-in-out;
-    }
-
-    .chat-message strong {
-        color: #00FFC6;
-    }
-
-    /* Sidebar Fix for better readability */
-    .sidebar .sidebar-content {
-        background-color: #1A1A2E !important;
-        color: #FFFFFF !important;
-    }
-
-    /* Sidebar text elements */
-    .sidebar .css-1d391kg, 
-    .sidebar .css-1cpxqw2, 
-    .sidebar .css-1v0mbdj, 
-    .sidebar .css-1x8cf1d {
-        color: #FFFFFF !important;
-    }
-
-    /* Sidebar links or buttons */
-    .sidebar .css-1aumxhk {
-        background-color: #2B2B4D !important;
-        color: #00FFC6 !important;
-        border-radius: 10px;
-    }
-
-    .sidebar .css-1aumxhk:hover {
-        background-color: #FF00FF !important;
-        color: #FFFFFF !important;
-        transform: scale(1.05);
-    }
-
-    .stButton > button {
-        border-radius: 20px;
-        padding: 0.5rem 1rem;
-        background-color: #00FFC6;
-        color: #0A0A1F;
-        border: none;
-        transition: all 0.3s ease-in-out;
-    }
-
-    .stButton > button:hover {
-        background-color: #FF00FF;
-        color: white;
-        transform: scale(1.05);
+    /* Typography */
+    h1, h2, h3, h4, h5, h6 {
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        color: #4A4A4A;
     }
 
     .title-text {
-        color: #FF00FF;
-        font-size: 2.5rem;
-        font-weight: bold;
+        color: #D4A017;
+        font-size: 3rem;
+        font-weight: 700;
         margin-bottom: 1rem;
+        text-shadow: 2px 2px 4px rgba(212, 160, 23, 0.3);
         animation: floatText 5s ease-in-out infinite;
+        font-family: 'Montserrat', sans-serif;
     }
 
     .subtitle-text {
-        color: #CCCCFF;
-        font-size: 1.2rem;
+        color: #8B7355;
+        font-size: 1.4rem;
         margin-bottom: 2rem;
+        font-weight: 300;
+        letter-spacing: 1px;
         animation: typing 4s steps(40, end), blink-caret 0.75s step-end infinite;
         white-space: nowrap;
         overflow: hidden;
-        border-right: 3px solid #ADD8E6;
+        border-right: 3px solid #D4A017;
+        font-family: 'Poppins', sans-serif;
     }
 
+    /* Input Styling */
+    .stTextInput > div > div > input {
+        border-radius: 25px;
+        padding: 15px 25px;
+        color: #4A4A4A;
+        background-color: #FFF8E7;
+        border: 2px solid #D4A017;
+        font-size: 1.1rem;
+        font-family: 'Poppins', sans-serif;
+        transition: all 0.3s ease-in-out;
+    }
+
+    .stTextInput > div > div > input:hover {
+        border-color: #8B7355;
+        box-shadow: 0 0 15px rgba(139, 115, 85, 0.3);
+    }
+
+    .stTextInput > div > div > input:focus {
+        border-color: #8B7355;
+        box-shadow: 0 0 20px rgba(139, 115, 85, 0.4);
+    }
+
+    /* Chat Messages */
+    .chat-message {
+        padding: 1.8rem;
+        border-radius: 15px;
+        margin-bottom: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        color: #4A4A4A;
+        transition: all 0.3s ease;
+        font-family: 'Poppins', sans-serif;
+        font-size: 1.1rem;
+        line-height: 1.6;
+    }
+
+    .chat-message:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .chat-message.user {
+        background: linear-gradient(135deg, #FFF8E7 0%, #F5E6D3 100%);
+        border-left: 5px solid #D4A017;
+    }
+
+    .chat-message.assistant {
+        background: linear-gradient(135deg, #F5E6D3 0%, #E6D5C3 100%);
+        border-left: 5px solid #8B7355;
+    }
+
+    .chat-message .content {
+        margin-top: 0.8rem;
+        color: #4A4A4A;
+        animation: fadeInUp 0.5s ease-in-out;
+    }
+
+    .chat-message strong {
+        color: #D4A017;
+        font-weight: 600;
+    }
+
+    /* Sidebar Styling */
+    .sidebar .sidebar-content {
+        background-color: #FFF8E7 !important;
+        color: #4A4A4A !important;
+        font-family: 'Poppins', sans-serif;
+    }
+
+    .sidebar h2 {
+        color: #D4A017;
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+
+    .sidebar p {
+        color: #8B7355;
+        font-size: 1.1rem;
+    }
+
+    /* Button Styling */
+    .stButton > button {
+        border-radius: 25px;
+        padding: 0.8rem 1.5rem;
+        background: linear-gradient(135deg, #D4A017 0%, #B38B0B 100%);
+        color: #FFF8E7;
+        border: none;
+        font-weight: 600;
+        font-size: 1.1rem;
+        font-family: 'Poppins', sans-serif;
+        transition: all 0.3s ease-in-out;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .stButton > button:hover {
+        background: linear-gradient(135deg, #8B7355 0%, #6B5B4B 100%);
+        color: #FFF8E7;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(139, 115, 85, 0.3);
+    }
+
+    /* Markdown Styling */
     .stMarkdown {
-        color: #F0F8FF;
+        color: #4A4A4A;
+        font-family: 'Poppins', sans-serif;
+        line-height: 1.6;
     }
 
     .stMarkdown p {
-        color: #F0F8FF;
+        color: #4A4A4A;
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
     }
 
     .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
-        color: #00FFC6;
+        color: #D4A017;
+        font-family: 'Montserrat', sans-serif;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
     }
 
     .stMarkdown strong {
-        color: #FF00FF;
-    }
-
-    .stApp {
-        background-color: #1A1A3D;
-        color: #FFFFFF;
-    }
-
-    .stTextInput > div > div > input::placeholder {
-        color: #8080FF;
+        color: #8B7355;
+        font-weight: 600;
     }
 
     .stMarkdown code {
-        background-color: #1B1B3A;
-        color: #00FFC6;
+        background-color: #F5E6D3;
+        color: #D4A017;
+        padding: 0.2rem 0.4rem;
+        border-radius: 4px;
+        font-family: 'Consolas', monospace;
     }
 
-    /* Text animation: fadeIn */
+    /* List Styling */
+    .stMarkdown ul li {
+        color: #8B7355;
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+        list-style-type: none;
+        padding-left: 1.5rem;
+        position: relative;
+    }
+
+    .stMarkdown ul li:before {
+        content: "•";
+        color: #D4A017;
+        position: absolute;
+        left: 0;
+        font-size: 1.2rem;
+    }
+
+    /* Animations */
     @keyframes fadeInUp {
         from {
             opacity: 0;
-            transform: translate3d(0, 20%, 0);
+            transform: translate3d(0, 20px, 0);
         }
         to {
             opacity: 1;
@@ -175,7 +227,6 @@ st.markdown("""
         }
     }
 
-    /* Floating Title Animation */
     @keyframes floatText {
         0%, 100% {
             transform: translateY(0px);
@@ -185,7 +236,6 @@ st.markdown("""
         }
     }
 
-    /* Typing animation */
     @keyframes typing {
         from { width: 0 }
         to { width: 100% }
@@ -193,14 +243,21 @@ st.markdown("""
 
     @keyframes blink-caret {
         from, to { border-color: transparent }
-        50% { border-color: #00FFC6; }
+        50% { border-color: #D4A017; }
     }
 
-    /* Apply Dark Green to the specific list items */
-    .stMarkdown ul li {
-        color: #006400; /* Dark Green */
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .title-text {
+            font-size: 2rem;
+        }
+        .subtitle-text {
+            font-size: 1.1rem;
+        }
+        .chat-message {
+            padding: 1.2rem;
+        }
     }
-
     </style>
 """, unsafe_allow_html=True)
 
@@ -427,7 +484,6 @@ def get_context(message):
             return keyword
     return None
 
-# Main application
 def main():
     # Initialize session state
     init_session_state()
@@ -501,7 +557,7 @@ def main():
                         <strong>You:</strong> {message['content']}
                     </div>
                 </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
         else:
             st.markdown(f"""
                 <div class='chat-message assistant'>
@@ -509,8 +565,8 @@ def main():
                         <strong>Assistant:</strong> {message['content']}
                     </div>
                 </div>
-            """, unsafe_allow_html=True)
-    
+                """, unsafe_allow_html=True)
+
     # Handle user input
     user_input = st.text_input("Type your message:", key="user_input", placeholder="Ask me anything about our products, orders, or stores...")
     
