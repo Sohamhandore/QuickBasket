@@ -6,6 +6,7 @@ from sklearn.pipeline import Pipeline
 import numpy as np
 import re
 import os
+import time
 
 # Set page config
 st.set_page_config(
@@ -15,39 +16,81 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS
-st.markdown("""
-    <style>
+# Initialize theme settings
+if 'theme' not in st.session_state:
+    st.session_state.theme = "light"
+
+# Theme colors
+THEME_COLORS = {
+    "light": {
+        "bg_primary": "#FFF8E7",
+        "bg_secondary": "#F5E6D3",
+        "text_primary": "#4A4A4A",
+        "text_secondary": "#8B7355",
+        "accent": "#D4A017",
+        "accent_secondary": "#B38B0B",
+        "card_bg": "#FFFFFF",
+        "success": "#28a745",
+        "info": "#17a2b8",
+        "warning": "#ffc107",
+        "danger": "#dc3545"
+    },
+    "dark": {
+        "bg_primary": "#121212",
+        "bg_secondary": "#1E1E1E",
+        "text_primary": "#E0E0E0",
+        "text_secondary": "#B0B0B0",
+        "accent": "#FFC107",
+        "accent_secondary": "#FFD54F",
+        "card_bg": "#2D2D2D",
+        "success": "#4CAF50",
+        "info": "#03A9F4",
+        "warning": "#FF9800",
+        "danger": "#F44336"
+    }
+}
+
+# Get current theme colors
+def get_theme():
+    return THEME_COLORS[st.session_state.theme]
+
+# Custom CSS with theme colors
+def get_custom_css():
+    colors = get_theme()
+    # Return only the CSS content, without the <style> tags
+    return f"""
     /* Import Google Fonts */
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Montserrat:wght@400;500;600;700&display=swap');
 
     /* Root Layout */
-    .main {
+    .main {{
         padding: 2rem;
-        background-color: #FFF8E7;
+        background-color: {colors['bg_primary']};
         font-family: 'Poppins', sans-serif;
-    }
+        color: {colors['text_primary']};
+        transition: all 0.3s ease;
+    }}
 
     /* Typography */
-    h1, h2, h3, h4, h5, h6 {
+    h1, h2, h3, h4, h5, h6 {{
         font-family: 'Montserrat', sans-serif;
         font-weight: 600;
         letter-spacing: 0.5px;
-        color: #4A4A4A;
-    }
+        color: {colors['text_primary']};
+    }}
 
-    .title-text {
-        color: #D4A017;
+    .title-text {{
+        color: {colors['accent']};
         font-size: 3rem;
         font-weight: 700;
         margin-bottom: 1rem;
         text-shadow: 2px 2px 4px rgba(212, 160, 23, 0.3);
         animation: floatText 5s ease-in-out infinite;
         font-family: 'Montserrat', sans-serif;
-    }
+    }}
 
-    .subtitle-text {
-        color: #8B7355;
+    .subtitle-text {{
+        color: {colors['text_secondary']};
         font-size: 1.4rem;
         margin-bottom: 2rem;
         font-weight: 300;
@@ -55,97 +98,97 @@ st.markdown("""
         animation: typing 4s steps(40, end), blink-caret 0.75s step-end infinite;
         white-space: nowrap;
         overflow: hidden;
-        border-right: 3px solid #D4A017;
+        border-right: 3px solid {colors['accent']};
         font-family: 'Poppins', sans-serif;
-    }
+    }}
 
     /* Input Styling */
-    .stTextInput > div > div > input {
+    .stTextInput > div > div > input {{
         border-radius: 25px;
         padding: 15px 25px;
-        color: #4A4A4A;
-        background-color: #FFF8E7;
-        border: 2px solid #D4A017;
+        color: {colors['text_primary']};
+        background-color: {colors['bg_secondary']};
+        border: 2px solid {colors['accent']};
         font-size: 1.1rem;
         font-family: 'Poppins', sans-serif;
         transition: all 0.3s ease-in-out;
-    }
+    }}
 
-    .stTextInput > div > div > input:hover {
-        border-color: #8B7355;
+    .stTextInput > div > div > input:hover {{
+        border-color: {colors['text_secondary']};
         box-shadow: 0 0 15px rgba(139, 115, 85, 0.3);
-    }
+    }}
 
-    .stTextInput > div > div > input:focus {
-        border-color: #8B7355;
+    .stTextInput > div > div > input:focus {{
+        border-color: {colors['text_secondary']};
         box-shadow: 0 0 20px rgba(139, 115, 85, 0.4);
-    }
+    }}
 
     /* Chat Messages */
-    .chat-message {
+    .chat-message {{
         padding: 1.8rem;
         border-radius: 15px;
         margin-bottom: 1.5rem;
         display: flex;
         flex-direction: column;
-        color: #4A4A4A;
+        color: {colors['text_primary']};
         transition: all 0.3s ease;
         font-family: 'Poppins', sans-serif;
         font-size: 1.1rem;
         line-height: 1.6;
-    }
+    }}
 
-    .chat-message:hover {
+    .chat-message:hover {{
         transform: translateY(-3px);
         box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-    }
+    }}
 
-    .chat-message.user {
-        background: linear-gradient(135deg, #FFF8E7 0%, #F5E6D3 100%);
-        border-left: 5px solid #D4A017;
-    }
+    .chat-message.user {{
+        background: linear-gradient(135deg, {colors['bg_secondary']} 0%, {colors['bg_primary']} 100%);
+        border-left: 5px solid {colors['accent']};
+    }}
 
-    .chat-message.assistant {
-        background: linear-gradient(135deg, #F5E6D3 0%, #E6D5C3 100%);
-        border-left: 5px solid #8B7355;
-    }
+    .chat-message.assistant {{
+        background: linear-gradient(135deg, {colors['bg_secondary']} 0%, {colors['bg_primary']} 100%);
+        border-left: 5px solid {colors['text_secondary']};
+    }}
 
-    .chat-message .content {
+    .chat-message .content {{
         margin-top: 0.8rem;
-        color: #4A4A4A;
+        color: {colors['text_primary']};
         animation: fadeInUp 0.5s ease-in-out;
-    }
+    }}
 
-    .chat-message strong {
-        color: #D4A017;
+    .chat-message strong {{
+        color: {colors['accent']};
         font-weight: 600;
-    }
+    }}
 
     /* Sidebar Styling */
-    .sidebar .sidebar-content {
-        background-color: #FFF8E7 !important;
-        color: #4A4A4A !important;
+    .sidebar .sidebar-content {{
+        background-color: {colors['bg_primary']} !important;
+        color: {colors['text_primary']} !important;
         font-family: 'Poppins', sans-serif;
-    }
+    }}
 
-    .sidebar h2 {
-        color: #D4A017;
+    .sidebar h2 {{
+        color: {colors['accent']};
         font-size: 1.8rem;
         font-weight: 600;
         margin-bottom: 1rem;
-    }
+    }}
 
-    .sidebar p {
-        color: #8B7355;
+    .sidebar p {{
+        color: {colors['text_secondary']};
         font-size: 1.1rem;
-    }
+    }}
 
     /* Button Styling */
-    .stButton > button {
+    .stButton > button {{
         border-radius: 25px;
         padding: 0.8rem 1.5rem;
-        background: linear-gradient(135deg, #D4A017 0%, #B38B0B 100%);
-        color: #FFF8E7;
+        background: linear-gradient(135deg, {colors['accent']} 0%, {colors['accent_secondary']} 100%);
+        color: #FFFFFF;
         border: none;
         font-weight: 600;
         font-size: 1.1rem;
@@ -153,111 +196,280 @@ st.markdown("""
         transition: all 0.3s ease-in-out;
         text-transform: uppercase;
         letter-spacing: 1px;
-    }
+    }}
 
-    .stButton > button:hover {
-        background: linear-gradient(135deg, #8B7355 0%, #6B5B4B 100%);
-        color: #FFF8E7;
+    .stButton > button:hover {{
+        background: linear-gradient(135deg, {colors['accent_secondary']} 0%, {colors['accent']} 100%);
+        color: #FFFFFF;
         transform: translateY(-2px);
         box-shadow: 0 5px 15px rgba(139, 115, 85, 0.3);
-    }
+    }}
 
     /* Markdown Styling */
-    .stMarkdown {
-        color: #4A4A4A;
+    .stMarkdown {{
+        color: {colors['text_primary']};
         font-family: 'Poppins', sans-serif;
         line-height: 1.6;
-    }
+    }}
 
-    .stMarkdown p {
-        color: #4A4A4A;
+    .stMarkdown p {{
+        color: {colors['text_primary']};
         font-size: 1.1rem;
         margin-bottom: 1rem;
-    }
+    }}
 
-    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
-        color: #D4A017;
+    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {{
+        color: {colors['accent']};
         font-family: 'Montserrat', sans-serif;
         margin-top: 2rem;
         margin-bottom: 1rem;
-    }
+    }}
 
-    .stMarkdown strong {
-        color: #8B7355;
+    .stMarkdown strong {{
+        color: {colors['text_secondary']};
         font-weight: 600;
-    }
+    }}
 
-    .stMarkdown code {
-        background-color: #F5E6D3;
-        color: #D4A017;
+    .stMarkdown code {{
+        background-color: {colors['bg_secondary']};
+        color: {colors['accent']};
         padding: 0.2rem 0.4rem;
         border-radius: 4px;
         font-family: 'Consolas', monospace;
-    }
+    }}
 
     /* List Styling */
-    .stMarkdown ul li {
-        color: #8B7355;
+    .stMarkdown ul li {{
+        color: {colors['text_secondary']};
         font-size: 1.1rem;
         margin-bottom: 0.5rem;
         list-style-type: none;
         padding-left: 1.5rem;
         position: relative;
-    }
+    }}
 
-    .stMarkdown ul li:before {
+    .stMarkdown ul li:before {{
         content: "•";
-        color: #D4A017;
+        color: {colors['accent']};
         position: absolute;
         left: 0;
         font-size: 1.2rem;
-    }
+    }}
+
+    /* Product Card Styling */
+    .product-card {{
+        background-color: {colors['card_bg']};
+        border-radius: 15px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+        border: 1px solid {colors['bg_secondary']};
+    }}
+    
+    .product-card:hover {{
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    }}
+    
+    .product-image {{
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+        border-bottom: 1px solid {colors['bg_secondary']};
+    }}
+    
+    .product-info {{
+        padding: 15px;
+    }}
+    
+    .product-title {{
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 600;
+        color: {colors['accent']};
+        margin-bottom: 5px;
+        font-size: 1.2rem;
+    }}
+    
+    .product-price {{
+        font-weight: bold;
+        color: {colors['text_secondary']};
+        margin-bottom: 10px;
+        font-size: 1.1rem;
+    }}
+    
+    .product-description {{
+        color: {colors['text_primary']};
+        margin-bottom: 15px;
+        font-size: 0.9rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }}
+    
+    /* Toast Notifications */
+    .toast {{
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 25px;
+        border-radius: 10px;
+        color: white;
+        opacity: 0;
+        transition: all 0.5s ease;
+        z-index: 9999;
+        font-family: 'Poppins', sans-serif;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        animation: fadeInRight 0.5s forwards, fadeOut 0.5s 2.5s forwards;
+    }}
+    
+    .toast.success {{
+        background-color: {colors['success']};
+    }}
+    
+    .toast.error {{
+        background-color: {colors['danger']};
+    }}
+    
+    .toast.info {{
+        background-color: {colors['info']};
+    }}
+
+    /* Cart Badge */
+    .cart-badge {{
+        position: relative;
+        display: inline-block;
+    }}
+    
+    .cart-badge[data-count]:after {{
+        content: attr(data-count);
+        position: absolute;
+        top: -10px;
+        right: -10px;
+        font-size: 0.75rem;
+        background: {colors['accent']};
+        color: white;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }}
+
+    /* Theme Toggle Button */
+    .theme-toggle {{
+        cursor: pointer;
+        padding: 5px 10px;
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: {colors['bg_secondary']};
+        color: {colors['text_primary']};
+        margin: 10px 0;
+        transition: all 0.3s ease;
+    }}
+    
+    .theme-toggle:hover {{
+        background: {colors['accent']};
+        color: white;
+    }}
+    
+    /* Mobile Responsiveness */
+    @media (max-width: 768px) {{
+        .title-text {{
+            font-size: 2rem;
+        }}
+        .subtitle-text {{
+            font-size: 1.1rem;
+        }}
+        .chat-message {{
+            padding: 1.2rem;
+        }}
+    }}
 
     /* Animations */
-    @keyframes fadeInUp {
-        from {
+    @keyframes fadeInUp {{
+        from {{
             opacity: 0;
             transform: translate3d(0, 20px, 0);
-        }
-        to {
+        }}
+        to {{
             opacity: 1;
             transform: none;
-        }
-    }
+        }}
+    }}
 
-    @keyframes floatText {
-        0%, 100% {
+    @keyframes floatText {{
+        0%, 100% {{
             transform: translateY(0px);
-        }
-        50% {
+        }}
+        50% {{
             transform: translateY(-10px);
-        }
-    }
+        }}
+    }}
 
-    @keyframes typing {
-        from { width: 0 }
-        to { width: 100% }
-    }
+    @keyframes typing {{
+        from {{ width: 0 }}
+        to {{ width: 100% }}
+    }}
 
-    @keyframes blink-caret {
-        from, to { border-color: transparent }
-        50% { border-color: #D4A017; }
-    }
+    @keyframes blink-caret {{
+        from, to {{ border-color: transparent }}
+        50% {{ border-color: {colors['accent']}; }}
+    }}
+    
+    @keyframes fadeInRight {{
+        from {{
+            opacity: 0;
+            transform: translateX(50px);
+        }}
+        to {{
+            opacity: 1;
+            transform: translateX(0);
+        }}
+    }}
+    
+    @keyframes fadeOut {{
+        from {{
+            opacity: 1;
+        }}
+        to {{
+            opacity: 0;
+        }}
+    }}
+    """
 
-    /* Responsive Design */
-    @media (max-width: 768px) {
-        .title-text {
-            font-size: 2rem;
-        }
-        .subtitle-text {
-            font-size: 1.1rem;
-        }
-        .chat-message {
-            padding: 1.2rem;
-        }
-    }
-    </style>
-""", unsafe_allow_html=True)
+# Before any content is displayed, completely reset if needed
+if st.sidebar.button("🔄 RESET EVERYTHING", key="complete_reset"):
+    # Complete reset of all state
+    for key in list(st.session_state.keys()):
+        if key != 'theme':  # Keep theme preference
+            del st.session_state[key]
+    st.rerun()
+
+# Force reset of chat history at the beginning to clear any CSS content
+if 'chat_history' in st.session_state:
+    # Look for CSS-related content and do a complete reset if found
+    for message in st.session_state.chat_history:
+        content = message.get('content', '')
+        if isinstance(content, str) and (
+            '@import' in content or 
+            '/* ' in content or 
+            ' {' in content or
+            '.stButton' in content or
+            '@keyframes' in content or
+            content.count(';') > 5
+        ):
+            # Reset the entire chat history
+            st.session_state.chat_history = []
+            st.session_state.last_input = ""
+            break
+
+# Apply custom CSS - ensure this is properly wrapped
+st.markdown(f"<style>{get_custom_css()}</style>", unsafe_allow_html=True)
 
 # Session state initialization
 def init_session_state():
@@ -268,21 +480,77 @@ def init_session_state():
     if 'last_input' not in st.session_state:
         st.session_state.last_input = ""
     if 'product_database' not in st.session_state:
-        # Create a mock product database
+        # Create a mock product database with images
         st.session_state.product_database = {
             "nike": {
-                "Air Max": {"price": 120, "sizes": [7, 8, 9, 10, 11], "colors": ["black", "white", "red"], "in_stock": True},
-                "React": {"price": 130, "sizes": [8, 9, 10], "colors": ["blue", "gray"], "in_stock": True},
-                "Dunk Low": {"price": 100, "sizes": [7, 8, 9], "colors": ["green", "yellow"], "in_stock": False}
+                "Air Max": {
+                    "price": 120, 
+                    "sizes": [7, 8, 9, 10, 11], 
+                    "colors": ["black", "white", "red"], 
+                    "in_stock": True,
+                    "image": "https://static.nike.com/a/images/t_PDP_1280_v1/f_auto,q_auto:eco/a7854567-0321-4590-9b3f-d89f10e5d69a/air-max-90-shoes-N7Tbw0.png",
+                    "description": "Iconic cushioning and retro appeal. The Nike Air Max delivers all-day comfort with a visible Max Air unit."
+                },
+                "React": {
+                    "price": 130, 
+                    "sizes": [8, 9, 10], 
+                    "colors": ["blue", "gray"], 
+                    "in_stock": True,
+                    "image": "https://static.nike.com/a/images/t_PDP_1280_v1/f_auto,q_auto:eco/48ffb562-9736-4373-9f5a-73868a3b0d79/react-infinity-run-flyknit-mens-running-shoe-RQ484B.png",
+                    "description": "The Nike React features soft, responsive foam for smooth transitions and enhanced comfort on every run."
+                },
+                "Dunk Low": {
+                    "price": 100, 
+                    "sizes": [7, 8, 9], 
+                    "colors": ["green", "yellow"], 
+                    "in_stock": False,
+                    "image": "https://static.nike.com/a/images/t_PDP_1280_v1/f_auto,q_auto:eco/344ff3e1-d944-499e-be62-5259a39f1845/dunk-low-shoes-26CGQ7.png",
+                    "description": "The Nike Dunk Low stays true to its roots with a padded, low-cut collar and iconic design details."
+                }
             },
             "adidas": {
-                "Ultraboost": {"price": 180, "sizes": [7, 8, 9, 10, 11, 12], "colors": ["black", "white", "blue"], "in_stock": True},
-                "Stan Smith": {"price": 80, "sizes": [8, 9, 10, 11], "colors": ["white", "green"], "in_stock": True},
-                "Gazelle": {"price": 90, "sizes": [7, 8, 9], "colors": ["blue", "red", "black"], "in_stock": True}
+                "Ultraboost": {
+                    "price": 180, 
+                    "sizes": [7, 8, 9, 10, 11, 12], 
+                    "colors": ["black", "white", "blue"], 
+                    "in_stock": True,
+                    "image": "https://assets.adidas.com/images/w_600,f_auto,q_auto/994ad7862f8b4520a647ad7800c4d61c_9366/Ultraboost_22_Shoes_Black_GZ0127_01_standard.jpg",
+                    "description": "Experience epic energy with Adidas Ultraboost, featuring responsive cushioning and a supportive fit."
+                },
+                "Stan Smith": {
+                    "price": 80, 
+                    "sizes": [8, 9, 10, 11], 
+                    "colors": ["white", "green"], 
+                    "in_stock": True,
+                    "image": "https://assets.adidas.com/images/w_600,f_auto,q_auto/a81eff5e6bd2435c900fad1500aad828_9366/Stan_Smith_Shoes_White_GV7775_01_standard.jpg",
+                    "description": "The Adidas Stan Smith is a timeless tennis shoe with clean lines and minimalist styling."
+                },
+                "Gazelle": {
+                    "price": 90, 
+                    "sizes": [7, 8, 9], 
+                    "colors": ["blue", "red", "black"], 
+                    "in_stock": True,
+                    "image": "https://assets.adidas.com/images/w_600,f_auto,q_auto/b3d97ded8430413fab3daa3100f3f5de_9366/Gazelle_Shoes_Blue_BB5478_01_standard.jpg",
+                    "description": "The iconic Adidas Gazelle features a suede upper and classic 3-Stripes design."
+                }
             },
             "puma": {
-                "RS-X": {"price": 110, "sizes": [8, 9, 10, 11], "colors": ["white", "black", "blue"], "in_stock": True},
-                "Suede": {"price": 70, "sizes": [7, 8, 9, 10], "colors": ["black", "blue", "red"], "in_stock": True}
+                "RS-X": {
+                    "price": 110, 
+                    "sizes": [8, 9, 10, 11], 
+                    "colors": ["white", "black", "blue"], 
+                    "in_stock": True,
+                    "image": "https://images.puma.com/image/upload/f_auto,q_auto,b_rgb:fafafa,w_600,h_600/global/380562/01/sv01/fnd/IND/fmt/png/RS-X-Reinvention-Sneakers",
+                    "description": "Puma RS-X features bold design and outstanding cushioning for street-ready style."
+                },
+                "Suede": {
+                    "price": 70, 
+                    "sizes": [7, 8, 9, 10], 
+                    "colors": ["black", "blue", "red"], 
+                    "in_stock": True,
+                    "image": "https://images.puma.com/image/upload/f_auto,q_auto,b_rgb:fafafa,w_600,h_600/global/374915/01/sv01/fnd/IND/fmt/png/Suede-Classic-XXI-Sneakers",
+                    "description": "The Puma Suede is a street style icon with a grippy rubber sole and soft suede upper."
+                }
             }
         }
     if 'order_database' not in st.session_state:
@@ -337,6 +605,34 @@ def init_session_state():
                 "phone": "555-987-6543",
                 "features": ["Clearance items", "Bulk purchase discounts", "Large parking"]
             }
+        ]
+    # New session state variables for advanced features
+    if 'shopping_cart' not in st.session_state:
+        st.session_state.shopping_cart = []
+    if 'user_preferences' not in st.session_state:
+        st.session_state.user_preferences = {
+            "favorite_brands": [],
+            "favorite_colors": [],
+            "viewed_products": [],
+            "preferred_sizes": []
+        }
+    if 'conversation_context' not in st.session_state:
+        st.session_state.conversation_context = {
+            "current_topic": None,
+            "mentioned_brands": [],
+            "mentioned_products": [],
+            "mentioned_sizes": [],
+            "mentioned_colors": [], 
+            "last_question_type": None,
+            "searches": []
+        }
+    if 'promotions' not in st.session_state:
+        st.session_state.promotions = [
+            {"code": "WELCOME10", "discount": 10, "description": "10% off your first purchase"},
+            {"code": "SUMMER20", "discount": 20, "description": "20% off summer collection"},
+            {"code": "FREESHIP", "discount": "free_shipping", "description": "Free shipping on orders over $50"},
+            {"code": "NIKE15", "discount": 15, "description": "15% off Nike products", "brand": "nike"},
+            {"code": "ADIDAS25", "discount": 25, "description": "25% off Adidas products", "brand": "adidas"}
         ]
 
 # Load training data
@@ -875,6 +1171,20 @@ RESPONSE_TEMPLATES = {
         "I understand you're interested in {corrected_term}. Here's what I can tell you.",
         "Assuming you meant {corrected_term}, I can provide the following information.",
         "I believe you're looking for information about {corrected_term}. Let me assist you with that."
+    ],
+    'Shopping_Cart': [
+        "I've added that to your cart. Would you like to continue shopping or view your cart?",
+        "Item added successfully! You can say 'show my cart' to view your items or continue adding more.",
+        "That's now in your shopping cart. Would you like to see anything else?",
+        "Added to your cart. Is there anything else you'd like to add before checking out?",
+        "Item has been added to your basket. Would you like to see more items or review your cart?"
+    ],
+    'Recommendation': [
+        "Based on your preferences, I think you might like these products as well.",
+        "Here are some other items that customers often buy with this product.",
+        "You might also be interested in these similar items from our collection.",
+        "Since you're interested in this, you might also like to check out these options.",
+        "Customers who viewed this item also frequently purchased these related products."
     ]
 }
 
@@ -910,8 +1220,49 @@ def extract_order_id(message):
 
 # Generate response based on intent
 def generate_response(user_input, classifier):
+    # Check for shopping cart commands first
+    cart_command, cart_params = extract_cart_command(user_input)
+    
+    if cart_command == "add":
+        success, message = add_to_cart(
+            cart_params["brand"], 
+            cart_params["model"], 
+            cart_params["size"], 
+            cart_params["color"]
+        )
+        if success:
+            # Add to viewed products for future recommendations
+            product_key = f"{cart_params['brand']} {cart_params['model']}"
+            if product_key not in st.session_state.user_preferences['viewed_products']:
+                st.session_state.user_preferences['viewed_products'].append(product_key)
+            return message
+        else:
+            return f"Sorry, I couldn't add that to your cart. {message}"
+    
+    elif cart_command == "view":
+        return format_cart_response()
+    
+    elif cart_command == "remove":
+        # Find the item in the cart
+        for i, item in enumerate(st.session_state.shopping_cart):
+            if ((cart_params["brand"] and item["brand"].lower() == cart_params["brand"].lower()) or
+                (cart_params["model"] and cart_params["model"].lower() in item["model"].lower())):
+                success, message = remove_from_cart(i)
+                return message
+        return "I couldn't find that item in your cart."
+    
+    elif cart_command == "clear":
+        st.session_state.shopping_cart = []
+        return "Your cart has been cleared."
+    
+    # If not a shopping cart command, proceed with intent classification    
     # Get intent and entities
     intent, confidence, entities = get_intent(user_input, classifier)
+    
+    # Update user preferences and conversation context
+    if 'brands' in entities and entities['brands']:
+        update_user_preferences(entities, intent)
+        update_conversation_context(entities, intent, user_input)
     
     # Extract product context if available
     product = get_product_context(user_input)
@@ -969,6 +1320,11 @@ def generate_response(user_input, classifier):
                 brand = brands[0]
                 model = models[0]
                 
+                # Add to viewed products for future recommendations
+                product_key = f"{brand} {model}"
+                if product_key not in st.session_state.user_preferences['viewed_products']:
+                    st.session_state.user_preferences['viewed_products'].append(product_key)
+                
                 # Check our database
                 product_info = None
                 if brand.lower() in st.session_state.product_database:
@@ -999,8 +1355,22 @@ def generate_response(user_input, classifier):
                                 response += f"We don't have them in {color}, but they come in {', '.join(product_info['colors'])}."
                         
                         response += f" The price is ${product_info['price']}."
+                        
+                        # Add cart prompt
+                        response += f"\n\nWould you like to add {brand.capitalize()} {model} to your cart?"
+                        
+                        # Add product recommendations
+                        recommendations = get_similar_products(brand, model)
+                        if recommendations:
+                            response += format_recommendation_response(recommendations)
                     else:
                         response = f"I'm sorry, {brand.capitalize()} {model} shoes are currently out of stock."
+                        
+                        # Suggest alternatives based on preferences
+                        recommendations = get_personalized_recommendations()
+                        if recommendations:
+                            response += "\n\nHere are some alternatives you might like:"
+                            response += format_recommendation_response(recommendations)
                 else:
                     response = f"I'll check if we have {brand.capitalize()} {model} in stock. What size are you looking for?"
             elif brands:
@@ -1022,6 +1392,594 @@ def generate_response(user_input, classifier):
         store_info = st.session_state.store_locations[0]  # Default to first store
         response = f"Our {store_info['name']} is located at {store_info['address']}. Hours: {store_info['hours']}. Phone: {store_info['phone']}."
     
+    # Add personalized recommendations for general inquiries
+    elif intent == "General Greetings" or intent == "Unknown/Other":
+        if st.session_state.user_preferences['favorite_brands'] or st.session_state.user_preferences['viewed_products']:
+            recommendations = get_personalized_recommendations()
+            if recommendations:
+                response += "\n\nBased on your interests, you might like these products:"
+                response += format_recommendation_response(recommendations)
+    
+    # If this is the first greeting, offer a promotion
+    if intent == "General Greetings" and len(st.session_state.chat_history) < 3:
+        welcome_promo = next((p for p in st.session_state.promotions if p["code"] == "WELCOME10"), None)
+        if welcome_promo:
+            response += f"\n\nAs a new customer, you can use code {welcome_promo['code']} for {welcome_promo['discount']}% off your first purchase!"
+    
+    return response
+
+# Product recommendation functions
+def update_user_preferences(entities, intent):
+    """Update user preferences based on their queries and conversation"""
+    # Update favorite brands
+    if entities['brands']:
+        for brand in entities['brands']:
+            if brand not in st.session_state.user_preferences['favorite_brands']:
+                st.session_state.user_preferences['favorite_brands'].append(brand)
+    
+    # Update favorite colors
+    if entities['colors']:
+        for color in entities['colors']:
+            if color not in st.session_state.user_preferences['favorite_colors']:
+                st.session_state.user_preferences['favorite_colors'].append(color)
+    
+    # Update preferred sizes
+    if entities['sizes']:
+        for size in entities['sizes']:
+            if size not in st.session_state.user_preferences['preferred_sizes']:
+                st.session_state.user_preferences['preferred_sizes'].append(size)
+
+def update_conversation_context(entities, intent, user_input):
+    """Track conversation context for more coherent multi-turn dialogues"""
+    # Update current topic
+    st.session_state.conversation_context['last_question_type'] = intent
+    
+    # Update brands, products, sizes mentioned in this conversation
+    if entities['brands']:
+        for brand in entities['brands']:
+            if brand not in st.session_state.conversation_context['mentioned_brands']:
+                st.session_state.conversation_context['mentioned_brands'].append(brand)
+    
+    if entities['models']:
+        for model in entities['models']:
+            if model not in st.session_state.conversation_context['mentioned_products']:
+                st.session_state.conversation_context['mentioned_products'].append(model)
+    
+    if entities['sizes']:
+        for size in entities['sizes']:
+            if size not in st.session_state.conversation_context['mentioned_sizes']:
+                st.session_state.conversation_context['mentioned_sizes'].append(size)
+    
+    if entities['colors']:
+        for color in entities['colors']:
+            if color not in st.session_state.conversation_context['mentioned_colors']:
+                st.session_state.conversation_context['mentioned_colors'].append(color)
+
+def get_similar_products(brand, model, limit=2):
+    """Get similar products to recommend"""
+    similar_products = []
+    
+    # If we know the brand and model
+    if brand and brand.lower() in st.session_state.product_database:
+        target_price = None
+        
+        # Find the price of the current product
+        for prod_model, details in st.session_state.product_database[brand.lower()].items():
+            if model.lower() in prod_model.lower():
+                target_price = details["price"]
+                break
+        
+        # Find similar products from the same brand
+        for prod_model, details in st.session_state.product_database[brand.lower()].items():
+            if model.lower() not in prod_model.lower() and details["in_stock"]:
+                similar_products.append({
+                    "brand": brand,
+                    "model": prod_model,
+                    "price": details["price"],
+                    "similarity": "same brand"
+                })
+        
+        # If we have a price, also find products with similar price points
+        if target_price:
+            for other_brand, models in st.session_state.product_database.items():
+                if other_brand != brand.lower():
+                    for other_model, details in models.items():
+                        if details["in_stock"] and abs(details["price"] - target_price) <= 30:
+                            similar_products.append({
+                                "brand": other_brand.capitalize(),
+                                "model": other_model,
+                                "price": details["price"],
+                                "similarity": "similar price"
+                            })
+    
+    # If we only know the brand
+    elif brand and brand.lower() in st.session_state.product_database:
+        # Recommend products from this brand
+        for prod_model, details in st.session_state.product_database[brand.lower()].items():
+            if details["in_stock"]:
+                similar_products.append({
+                    "brand": brand,
+                    "model": prod_model,
+                    "price": details["price"],
+                    "similarity": "popular model"
+                })
+    
+    # If we don't have enough recommendations yet, add some based on preferences
+    if len(similar_products) < limit and st.session_state.user_preferences['favorite_brands']:
+        # Add products from favorite brands
+        for fav_brand in st.session_state.user_preferences['favorite_brands']:
+            if fav_brand.lower() in st.session_state.product_database:
+                for prod_model, details in st.session_state.product_database[fav_brand.lower()].items():
+                    if details["in_stock"]:
+                        product = {
+                            "brand": fav_brand.capitalize(),
+                            "model": prod_model,
+                            "price": details["price"],
+                            "similarity": "from favorite brand"
+                        }
+                        if product not in similar_products:
+                            similar_products.append(product)
+    
+    # Sort by price and limit results
+    similar_products = sorted(similar_products, key=lambda x: x["price"])
+    return similar_products[:limit]
+
+def get_personalized_recommendations(limit=2):
+    """Get personalized recommendations based on user preferences"""
+    recommendations = []
+    
+    # First check favorite brands
+    if st.session_state.user_preferences["favorite_brands"]:
+        for brand in st.session_state.user_preferences["favorite_brands"]:
+            if brand.lower() in st.session_state.product_database:
+                for model, details in st.session_state.product_database[brand.lower()].items():
+                    if details["in_stock"]:
+                        # Check if this matches user's preferred sizes
+                        size_match = False
+                        if st.session_state.user_preferences["preferred_sizes"]:
+                            for size in st.session_state.user_preferences["preferred_sizes"]:
+                                if float(size) in details["sizes"]:
+                                    size_match = True
+                                    break
+                        else:
+                            size_match = True
+                            
+                        # Check if this matches user's preferred colors
+                        color_match = False
+                        if st.session_state.user_preferences["favorite_colors"]:
+                            for color in st.session_state.user_preferences["favorite_colors"]:
+                                if color in details["colors"]:
+                                    color_match = True
+                                    break
+                        else:
+                            color_match = True
+                        
+                        # Add if it matches preferences
+                        if size_match or color_match:
+                            recommendations.append({
+                                "brand": brand.capitalize(),
+                                "model": model,
+                                "price": details["price"],
+                                "reason": "Based on your preferences"
+                            })
+    
+    # If still not enough recommendations, add some popular products
+    if len(recommendations) < limit:
+        # Just add some popular products (could be enhanced with real popularity metrics)
+        popular_products = [
+            {"brand": "nike", "model": "Air Max"},
+            {"brand": "adidas", "model": "Ultraboost"},
+            {"brand": "puma", "model": "RS-X"}
+        ]
+        
+        for product in popular_products:
+            if product["brand"] in st.session_state.product_database:
+                if product["model"] in st.session_state.product_database[product["brand"]]:
+                    details = st.session_state.product_database[product["brand"]][product["model"]]
+                    if details["in_stock"]:
+                        recommendations.append({
+                            "brand": product["brand"].capitalize(),
+                            "model": product["model"],
+                            "price": details["price"],
+                            "reason": "Popular choice"
+                        })
+    
+    # Remove duplicates and limit results
+    unique_recommendations = []
+    for rec in recommendations:
+        if rec not in unique_recommendations:
+            unique_recommendations.append(rec)
+    
+    return unique_recommendations[:limit]
+
+def format_recommendation_response(recommendations):
+    """Format recommendations into a readable response"""
+    if not recommendations:
+        return ""
+    
+    response = "\n\nYou might also like: "
+    for i, rec in enumerate(recommendations):
+        if i > 0:
+            response += " | "
+        response += f"{rec['brand']} {rec['model']} (${rec['price']})"
+        if 'reason' in rec:
+            response += f" - {rec['reason']}"
+        elif 'similarity' in rec:
+            response += f" - {rec['similarity']}"
+    
+    return response
+
+# Shopping cart functions
+def add_to_cart(brand, model, size=None, color=None, quantity=1):
+    """Add a product to the shopping cart"""
+    if brand.lower() not in st.session_state.product_database:
+        return False, "Brand not found"
+    
+    # Find the exact model
+    model_found = False
+    product_details = None
+    actual_model_name = None
+    
+    for prod_model, details in st.session_state.product_database[brand.lower()].items():
+        if model.lower() in prod_model.lower():
+            model_found = True
+            product_details = details
+            actual_model_name = prod_model
+            break
+    
+    if not model_found:
+        return False, "Model not found"
+    
+    # Check if in stock
+    if not product_details["in_stock"]:
+        return False, "Product is out of stock"
+    
+    # Validate size if provided
+    if size and float(size) not in product_details["sizes"]:
+        return False, f"Size {size} not available for this model"
+    
+    # Validate color if provided
+    if color and color not in product_details["colors"]:
+        return False, f"{color.capitalize()} color not available for this model"
+    
+    # Default to first available size/color if not specified
+    if not size:
+        size = product_details["sizes"][0]
+    if not color:
+        color = product_details["colors"][0]
+    
+    # Add to cart
+    cart_item = {
+        "brand": brand.capitalize(),
+        "model": actual_model_name,
+        "size": size,
+        "color": color,
+        "price": product_details["price"],
+        "quantity": quantity,
+        "item_total": product_details["price"] * quantity
+    }
+    
+    # Check if the item is already in the cart (same brand, model, size, color)
+    for i, item in enumerate(st.session_state.shopping_cart):
+        if (item["brand"].lower() == brand.lower() and 
+            item["model"] == actual_model_name and 
+            item["size"] == size and 
+            item["color"] == color):
+            # Update quantity instead of adding a new item
+            st.session_state.shopping_cart[i]["quantity"] += quantity
+            st.session_state.shopping_cart[i]["item_total"] = st.session_state.shopping_cart[i]["price"] * st.session_state.shopping_cart[i]["quantity"]
+            return True, f"Updated {brand.capitalize()} {actual_model_name} in your cart"
+    
+    # Add as a new item
+    st.session_state.shopping_cart.append(cart_item)
+    return True, f"Added {brand.capitalize()} {actual_model_name} to your cart"
+
+def remove_from_cart(index):
+    """Remove an item from the shopping cart by index"""
+    if index < 0 or index >= len(st.session_state.shopping_cart):
+        return False, "Invalid item index"
+    
+    removed_item = st.session_state.shopping_cart.pop(index)
+    return True, f"Removed {removed_item['brand']} {removed_item['model']} from your cart"
+
+def update_cart_quantity(index, new_quantity):
+    """Update the quantity of an item in the cart"""
+    if index < 0 or index >= len(st.session_state.shopping_cart):
+        return False, "Invalid item index"
+    
+    if new_quantity <= 0:
+        return remove_from_cart(index)
+    
+    st.session_state.shopping_cart[index]["quantity"] = new_quantity
+    st.session_state.shopping_cart[index]["item_total"] = st.session_state.shopping_cart[index]["price"] * new_quantity
+    return True, f"Updated quantity for {st.session_state.shopping_cart[index]['brand']} {st.session_state.shopping_cart[index]['model']}"
+
+def get_cart_total():
+    """Calculate the total price of items in the cart"""
+    total = 0
+    for item in st.session_state.shopping_cart:
+        total += item["item_total"]
+    return total
+
+def format_cart_response():
+    """Format shopping cart into a readable response"""
+    if not st.session_state.shopping_cart:
+        return "Your cart is empty."
+    
+    response = "Your shopping cart:\n"
+    for i, item in enumerate(st.session_state.shopping_cart):
+        response += f"{i+1}. {item['brand']} {item['model']} - {item['color'].capitalize()}, Size {item['size']}, ${item['price']} x {item['quantity']} = ${item['item_total']}\n"
+    
+    response += f"\nTotal: ${get_cart_total()}"
+    
+    # Add promotion code suggestions
+    relevant_promos = []
+    for promo in st.session_state.promotions:
+        # Check if this promotion applies to anything in the cart
+        if "brand" in promo:
+            for item in st.session_state.shopping_cart:
+                if item["brand"].lower() == promo["brand"]:
+                    relevant_promos.append(promo)
+                    break
+        else:
+            relevant_promos.append(promo)
+    
+    if relevant_promos:
+        response += "\n\nAvailable promotions:"
+        for promo in relevant_promos[:2]:  # Limit to 2 promotions
+            discount = f"{promo['discount']}% off" if isinstance(promo['discount'], (int, float)) else promo['discount']
+            response += f"\n• Use code {promo['code']} for {discount} - {promo['description']}"
+    
+    return response
+
+def extract_cart_command(text):
+    """Extract shopping cart commands from user input"""
+    text_lower = text.lower()
+    
+    # Check for add to cart commands
+    add_patterns = [
+        r'add (.*) to (?:my )?cart',
+        r'buy (.*)',
+        r'purchase (.*)',
+        r'get (.*)'
+    ]
+    
+    for pattern in add_patterns:
+        match = re.search(pattern, text_lower)
+        if match:
+            product_desc = match.group(1)
+            # Extract brand, model, size, color from product description
+            entities = extract_entities(product_desc)
+            
+            if entities['brands'] and entities['models']:
+                return "add", {
+                    "brand": entities['brands'][0],
+                    "model": entities['models'][0],
+                    "size": entities['sizes'][0] if entities['sizes'] else None,
+                    "color": entities['colors'][0] if entities['colors'] else None
+                }
+    
+    # Check for view cart commands
+    view_patterns = [
+        r'view (?:my )?cart',
+        r'show (?:my )?cart',
+        r'check (?:my )?cart',
+        r'what\'s in (?:my )?cart',
+        r'display cart'
+    ]
+    
+    for pattern in view_patterns:
+        if re.search(pattern, text_lower):
+            return "view", {}
+    
+    # Check for remove from cart commands
+    remove_patterns = [
+        r'remove (.*) from (?:my )?cart',
+        r'delete (.*) from (?:my )?cart'
+    ]
+    
+    for pattern in remove_patterns:
+        match = re.search(pattern, text_lower)
+        if match:
+            product_desc = match.group(1)
+            entities = extract_entities(product_desc)
+            
+            if entities['brands'] or entities['models']:
+                return "remove", {
+                    "brand": entities['brands'][0] if entities['brands'] else None,
+                    "model": entities['models'][0] if entities['models'] else None
+                }
+    
+    # Check for clear cart commands
+    clear_patterns = [
+        r'clear (?:my )?cart',
+        r'empty (?:my )?cart'
+    ]
+    
+    for pattern in clear_patterns:
+        if re.search(pattern, text_lower):
+            return "clear", {}
+    
+    return None, {}
+
+# Size guide data
+SIZE_GUIDE = {
+    "US": [4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10, 10.5, 11, 11.5, 12, 12.5, 13, 14, 15],
+    "UK": [3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10, 10.5, 11, 11.5, 12, 12.5, 13.5, 14.5],
+    "EU": [36, 37, 37.5, 38, 38.5, 39, 40, 41, 42, 42.5, 43, 44, 45, 45.5, 46, 47, 47.5, 48, 49, 50, 51],
+    "CM": [22, 22.5, 23, 23.5, 24, 24.5, 25, 25.5, 26, 26.5, 27, 27.5, 28, 28.5, 29, 29.5, 30, 30.5, 31, 32, 33]
+}
+
+# Function to show size guide
+def show_size_guide():
+    st.markdown("### Shoe Size Conversion Chart")
+    
+    # Create a DataFrame for the size chart
+    size_df = pd.DataFrame(SIZE_GUIDE)
+    st.table(size_df)
+    
+    # Foot measurement guide
+    st.markdown("### How to Measure Your Foot")
+    
+    col1, col2 = st.columns([1, 2])
+    
+    # Add measuring instructions with an image
+    col1.image("https://cdn.shopify.com/s/files/1/0419/1525/files/Men-sizing-guide.jpg?v=1589326527", caption="Foot Measurement Guide")
+    
+    col2.markdown("""
+    1. **Place your foot on a piece of paper**
+    2. **Trace around your foot**
+    3. **Measure the length from heel to toe**
+    4. **Use the chart to find your size**
+    
+    For the best fit:
+    - Measure your feet in the evening (when they're largest)
+    - Wear the socks you plan to wear with your shoes
+    - Measure both feet and use the larger measurement
+    """)
+    
+    # Interactive size finder
+    st.markdown("### Find Your Size")
+    
+    # Input options
+    measurement_type = st.selectbox("Measurement Type", ["Foot Length (cm)", "Current Size"])
+    
+    if measurement_type == "Foot Length (cm)":
+        foot_length = st.slider("Foot Length in cm", min_value=22.0, max_value=33.0, value=26.0, step=0.5)
+        
+        # Find the closest size
+        closest_index = min(range(len(SIZE_GUIDE["CM"])), key=lambda i: abs(SIZE_GUIDE["CM"][i] - foot_length))
+        
+        # Display results
+        st.markdown(f"""
+        ### Your Recommended Size:
+        - US: **{SIZE_GUIDE["US"][closest_index]}**
+        - UK: **{SIZE_GUIDE["UK"][closest_index]}**
+        - EU: **{SIZE_GUIDE["EU"][closest_index]}**
+        - CM: **{SIZE_GUIDE["CM"][closest_index]}**
+        """)
+        
+    else:
+        col1, col2 = st.columns(2)
+        current_size_system = col1.selectbox("Current Size System", ["US", "UK", "EU"])
+        
+        # Dynamically set min/max values based on the selected system
+        min_size = min(SIZE_GUIDE[current_size_system])
+        max_size = max(SIZE_GUIDE[current_size_system])
+        
+        current_size = col2.number_input(f"Your Current {current_size_system} Size", 
+                                         min_value=float(min_size), 
+                                         max_value=float(max_size),
+                                         value=float(SIZE_GUIDE[current_size_system][10]),  # Default to median
+                                         step=0.5)
+        
+        # Find the closest size in each system
+        closest_index = min(range(len(SIZE_GUIDE[current_size_system])), 
+                            key=lambda i: abs(SIZE_GUIDE[current_size_system][i] - current_size))
+        
+        # Display conversion results
+        st.markdown("### Size Conversion Results:")
+        for system in ["US", "UK", "EU", "CM"]:
+            if system != current_size_system:
+                st.markdown(f"{system}: **{SIZE_GUIDE[system][closest_index]}**")
+
+def is_css_content(text):
+    """Check if the text appears to be CSS content - extremely thorough version"""
+    if not text or not isinstance(text, str):
+        return False
+        
+    # Common CSS patterns that strongly indicate CSS content
+    strong_indicators = [
+        "@import url(",
+        "@keyframes",
+        "@media",
+        "font-family:",
+        "margin:",
+        "padding:",
+        "display: flex",
+        "position: absolute",
+        "background-color:",
+        "linear-gradient("
+    ]
+    
+    # If text contains any strong indicators, it's likely CSS
+    for indicator in strong_indicators:
+        if indicator in text:
+            return True
+    
+    # CSS structure patterns
+    css_structural_patterns = [
+        r'\s*\.\w+\s*{',             # .classname {
+        r'\s*#\w+\s*{',              # #id {
+        r'\s*\w+\s*{\s*\w+:',        # element { property:
+        r'}\s*\.\w+\s*{',            # } .classname {
+        r'}\s*#\w+\s*{',             # } #id {
+        r'\s*@\w+\s*{',              # @media/keyframes {
+        r':[^;{]+;',                 # :pseudo-class
+        r'}\s*$'                     # ending with }
+    ]
+    
+    # Check for CSS structure patterns
+    for pattern in css_structural_patterns:
+        if re.search(pattern, text):
+            return True
+    
+    # Check for typical CSS property-value pairs
+    css_property_pattern = r'(\s*[\w-]+\s*:\s*[^;{]+\s*;)'
+    property_count = len(re.findall(css_property_pattern, text))
+    
+    # If we have multiple property-value pairs, it's likely CSS
+    if property_count > 3:
+        return True
+        
+    # Count brace pairs and semicolons - high counts indicate CSS
+    opening_braces = text.count('{')
+    closing_braces = text.count('}')
+    semicolons = text.count(';')
+    
+    # If balanced braces and many semicolons, it's likely CSS
+    if opening_braces > 1 and opening_braces == closing_braces and semicolons > 5:
+        return True
+        
+    # If long text with CSS-like patterns or many semicolons, likely CSS
+    if len(text) > 200 and (semicolons > 10 or ('{' in text and '}' in text)):
+        return True
+    
+    return False
+
+# Clean chat history of any CSS content
+def clean_chat_history():
+    """Remove any messages that appear to be CSS code"""
+    if 'chat_history' in st.session_state:
+        cleaned_history = []
+        for message in st.session_state.chat_history:
+            if not is_css_content(message['content']):
+                cleaned_history.append(message)
+        st.session_state.chat_history = cleaned_history
+
+# Call this when the app initializes
+if 'css_cleaned' not in st.session_state:
+    clean_chat_history()
+    st.session_state.css_cleaned = True
+
+# Add this function to handle CSS content in user messages
+def handle_css_message(css_text):
+    """Handle a message that appears to contain CSS content"""
+    # Don't add CSS text to chat history
+    response = """
+    I noticed your message contains CSS code. Since this app already has styling applied, 
+    I won't display the CSS as text to avoid conflicts. 
+    
+    If you're trying to customize the styling, please note that in Streamlit:
+    1. CSS is applied using st.markdown with unsafe_allow_html=True
+    2. The CSS should be wrapped in <style> tags
+    3. You can use the theme toggle feature in the sidebar instead
+    
+    If you're experiencing CSS issues, try the 'RESET EVERYTHING' button in the sidebar.
+    """
+    
+    # Add only the response to chat history
+    st.session_state.chat_history.append({'role': 'assistant', 'content': response})
     return response
 
 def main():
@@ -1037,6 +1995,14 @@ def main():
             </div>
         """, unsafe_allow_html=True)
         
+        # Theme Toggle
+        theme_emoji = "🌙" if st.session_state.theme == "light" else "☀️"
+        theme_text = "Dark Mode" if st.session_state.theme == "light" else "Light Mode"
+        
+        if st.button(f"{theme_emoji} {theme_text}", key="theme_toggle"):
+            st.session_state.theme = "dark" if st.session_state.theme == "light" else "light"
+            st.rerun()
+        
         st.markdown("---")
         
         st.markdown("### 🤖 Features")
@@ -1046,6 +2012,74 @@ def main():
             - 🏪 Find store locations & hours
             - 🛍️ Check product availability
             - 👟 Get information on shoes & apparel
+            - 🛒 Add products to your shopping cart
+            - 💡 Get personalized recommendations
+            - 📏 Interactive size guide
+        """)
+        
+        st.markdown("---")
+        
+        # Show shopping cart in sidebar
+        if st.session_state.shopping_cart:
+            cart_count = sum(item['quantity'] for item in st.session_state.shopping_cart)
+            st.markdown(f"### 🛒 Your Shopping Cart ({cart_count} items)")
+            
+            total = 0
+            for item in st.session_state.shopping_cart:
+                st.markdown("---")
+                
+                # Display product info
+                st.markdown(f"**{item['brand']} {item['model']}**")
+                st.markdown(f"Size: {item['size']} | Color: {item['color'].capitalize()}")
+                st.markdown(f"Quantity: {item['quantity']} | Price: ${item['item_total']}")
+                
+                # Get item index
+                item_index = st.session_state.shopping_cart.index(item)
+                
+                # Simple quantity controls without nested columns
+                if st.button("-", key=f"dec_{item_index}"):
+                    if item['quantity'] > 1:
+                        st.session_state.shopping_cart[item_index]["quantity"] -= 1
+                        st.session_state.shopping_cart[item_index]["item_total"] = st.session_state.shopping_cart[item_index]["price"] * st.session_state.shopping_cart[item_index]["quantity"]
+                        st.rerun()
+                    else:
+                        # Remove if quantity would be 0
+                        st.session_state.shopping_cart.pop(item_index)
+                        st.rerun()
+                
+                if st.button("+", key=f"inc_{item_index}"):
+                    st.session_state.shopping_cart[item_index]["quantity"] += 1
+                    st.session_state.shopping_cart[item_index]["item_total"] = st.session_state.shopping_cart[item_index]["price"] * st.session_state.shopping_cart[item_index]["quantity"]
+                    st.rerun()
+                
+                # Remove button
+                if st.button("🗑️ Remove", key=f"remove_{item_index}"):
+                    st.session_state.shopping_cart.pop(item_index)
+                    st.rerun()
+                
+                total += item['item_total']
+            
+            st.markdown("---")
+            st.markdown(f"**Total: ${total}**")
+            
+            # Checkout and Clear buttons
+            if st.button("🛒 Checkout"):
+                st.session_state.shopping_cart = []
+                st.success("Order placed successfully! Your cart has been cleared.")
+                st.rerun()
+            
+            if st.button("🗑️ Clear Cart"):
+                st.session_state.shopping_cart = []
+                st.rerun()
+        
+        # Show some sample commands
+        st.markdown("### 💬 Sample Commands")
+        st.markdown("""
+            - "Do you have Nike Air Max in size 10?"
+            - "Add Adidas Ultraboost to cart"
+            - "Show my cart"
+            - "What's the return policy?"
+            - "Where is your store located?"
         """)
         
         st.markdown("---")
@@ -1058,63 +2092,216 @@ def main():
     st.markdown("<h1 class='title-text'>Quick Basket Customer Support</h1>", unsafe_allow_html=True)
     st.markdown("<p class='subtitle-text'>Your Fast, Friendly, and Frugal shopping assistant is here to help!</p>", unsafe_allow_html=True)
     
-    # Model initialization
-    if st.session_state.classifier is None:
-        with st.spinner("🔄 Setting up the assistant..."):
-            df = load_data()
-            if df is not None:
-                classifier = train_model(df)
-                if classifier is not None:
-                    st.session_state.classifier = classifier
-                    st.success("✅ Ready to assist you!")
-                else:
-                    st.error("❌ Failed to train the assistant.")
-            else:
-                st.error("❌ Failed to load training data.")
-    
-    # Chat interface
-    st.markdown("### 💬 Chat with our Quick AI assistant")
-    
-    # Display chat history
-    for message in st.session_state.chat_history:
-        if message['role'] == 'user':
-            st.markdown(f"""
-                <div class='chat-message user'>
-                    <div class='content'>
-                        <strong>You:</strong> {message['content']}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-        else:
-            st.markdown(f"""
-                <div class='chat-message assistant'>
-                    <div class='content'>
-                        <strong>Assistant:</strong> {message['content']}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-    
-    # User input field
-    with st.container():
-        user_input = st.text_input("Type your message:", key="user_input", placeholder="Ask me about products, orders, or stores...")
-    
-    # Process user input
-    if user_input and user_input != st.session_state.last_input:
-        # Update session state
-        st.session_state.last_input = user_input
-        
-        # Add user message to chat history
-        st.session_state.chat_history.append({'role': 'user', 'content': user_input})
-        
-        # Generate response
-        if st.session_state.classifier is not None:
-            response = generate_response(user_input, st.session_state.classifier)
-            
-            # Add assistant message to chat history
-            st.session_state.chat_history.append({'role': 'assistant', 'content': response})
-        
-        # Rerun to update the UI
+    # Emergency Reset Button - placed at the top for easy access
+    col1, col2, col3 = st.columns([1, 4, 3])
+    if col1.button("🔄 RESET", key="emergency_reset", help="Reset chat history"):
+        # Complete reset of the chat
+        st.session_state.chat_history = []
+        st.session_state.last_input = ""
+        st.session_state.css_cleaned = True
+        st.success("Chat completely reset!")
         st.rerun()
+    
+    # Emergency note if CSS content is detected in chat history - REMOVED
+    
+    # Tabs for different sections
+    chat_tab, catalog_tab, size_guide_tab, orders_tab = st.tabs(["💬 Chat", "👟 Product Catalog", "📏 Size Guide", "📦 Your Orders"])
+    
+    with chat_tab:
+        # Model initialization
+        if st.session_state.classifier is None:
+            with st.spinner("🔄 Setting up the assistant..."):
+                df = load_data()
+                if df is not None:
+                    classifier = train_model(df)
+                    if classifier is not None:
+                        st.session_state.classifier = classifier
+                        st.success("✅ Ready to assist you!")
+                    else:
+                        st.error("❌ Failed to train the assistant.")
+                else:
+                    st.error("❌ Failed to load training data.")
+        
+        # Chat interface
+        st.markdown("### 💬 Chat with our Quick AI assistant")
+        
+        # Display chat history
+        for message in st.session_state.chat_history:
+            if message['role'] == 'user':
+                st.markdown(f"""
+                    <div class='chat-message user'>
+                        <div class='content'>
+                            <strong>You:</strong> {message['content']}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                    <div class='chat-message assistant'>
+                        <div class='content'>
+                            <strong>Assistant:</strong> {message['content']}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+        
+        # User input field
+        with st.container():
+            user_input = st.text_input("Type your message:", key="user_input", placeholder="Ask me about products, orders, or stores...")
+        
+        # Process user input
+        if user_input and user_input != st.session_state.last_input:
+            # Check if input appears to be CSS code
+            if is_css_content(user_input):
+                st.session_state.last_input = user_input  # Mark as processed
+                handle_css_message(user_input)
+                st.rerun()
+            else:
+                # Update session state
+                st.session_state.last_input = user_input
+                
+                # Add user message to chat history
+                st.session_state.chat_history.append({'role': 'user', 'content': user_input})
+                
+                # Generate response
+                if st.session_state.classifier is not None:
+                    response = generate_response(user_input, st.session_state.classifier)
+                    
+                    # Check if response contains CSS content
+                    if is_css_content(response):
+                        # Replace with a safe message
+                        response = "I generated a response with styling information, but I'll omit it to avoid display issues. Please try asking in a different way."
+                    
+                    # Add assistant message to chat history
+                    st.session_state.chat_history.append({'role': 'assistant', 'content': response})
+                
+                # Rerun to update the UI
+                st.rerun()
+    
+    # Product catalog tab
+    with catalog_tab:
+        st.markdown("### 👟 Browse Our Products")
+        
+        # Filter options
+        col1, col2, col3 = st.columns(3)
+        brand_filter = col1.selectbox("Brand", ["All"] + list({brand.capitalize() for brand in st.session_state.product_database.keys()}))
+        price_range = col2.slider("Price Range", 0, 200, (0, 200))
+        show_in_stock_only = col3.checkbox("In Stock Only", True)
+        
+        # Display products in a grid
+        st.markdown("#### Featured Products")
+        
+        # Get all products that match the filters
+        filtered_products = []
+        
+        for brand, models in st.session_state.product_database.items():
+            if brand_filter == "All" or brand.capitalize() == brand_filter:
+                for model_name, details in models.items():
+                    if price_range[0] <= details["price"] <= price_range[1]:
+                        if not show_in_stock_only or details["in_stock"]:
+                            filtered_products.append({
+                                "brand": brand.capitalize(),
+                                "model": model_name,
+                                "details": details
+                            })
+        
+        # Display products in rows of 3
+        num_products = len(filtered_products)
+        rows = (num_products + 2) // 3  # Ceiling division
+        
+        for row in range(rows):
+            cols = st.columns(3)
+            for col_idx in range(3):
+                product_idx = row * 3 + col_idx
+                if product_idx < num_products:
+                    product = filtered_products[product_idx]
+                    
+                    # Product card with HTML
+                    cols[col_idx].markdown(f"""
+                        <div class="product-card">
+                            <img src="{product['details']['image']}" alt="{product['brand']} {product['model']}" class="product-image">
+                            <div class="product-info">
+                                <div class="product-title">{product['brand']} {product['model']}</div>
+                                <div class="product-price">${product['details']['price']}</div>
+                                <div class="product-description">{product['details']['description']}</div>
+                            </div>
+                        </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # Add to cart button
+                    if product['details']['in_stock']:
+                        # Size and color selections
+                        size_options = [f"Size {size}" for size in product['details']['sizes']]
+                        color_options = [color.capitalize() for color in product['details']['colors']]
+                        
+                        selected_size = cols[col_idx].selectbox(
+                            "Size", 
+                            size_options,
+                            key=f"size_{product['brand']}_{product['model']}"
+                        )
+                        
+                        selected_color = cols[col_idx].selectbox(
+                            "Color", 
+                            color_options,
+                            key=f"color_{product['brand']}_{product['model']}"
+                        )
+                        
+                        # Extract numeric size value
+                        size_value = float(selected_size.replace("Size ", ""))
+                        color_value = selected_color.lower()
+                        
+                        if cols[col_idx].button("Add to Cart", key=f"add_{product['brand']}_{product['model']}"):
+                            success, message = add_to_cart(
+                                product['brand'],
+                                product['model'],
+                                size_value,
+                                color_value
+                            )
+                            
+                            if success:
+                                st.success("Product added to cart!")
+                                
+                                # Add to viewed products
+                                product_key = f"{product['brand']} {product['model']}"
+                                if product_key not in st.session_state.user_preferences['viewed_products']:
+                                    st.session_state.user_preferences['viewed_products'].append(product_key)
+                                
+                                st.rerun()
+                            else:
+                                st.error(message)
+                    else:
+                        cols[col_idx].markdown("<span style='color: red;'>Out of Stock</span>", unsafe_allow_html=True)
+    
+    # Size guide tab
+    with size_guide_tab:
+        show_size_guide()
+    
+    # Orders tab
+    with orders_tab:
+        st.markdown("### 📦 Your Orders")
+        
+        # Show sample order history
+        if st.session_state.order_database:
+            for order_id, order_details in st.session_state.order_database.items():
+                with st.expander(f"Order #{order_id} - {order_details['date']}"):
+                    st.markdown(f"**Status:** {order_details['status']}")
+                    st.markdown(f"**Delivery:** {order_details['delivery_date']}")
+                    st.markdown(f"**Ship to:** {order_details['address']}")
+                    
+                    st.markdown("**Items:**")
+                    for item in order_details['items']:
+                        st.markdown(f"• {item}")
+                    
+                    st.markdown(f"**Total:** ${order_details['total']}")
+                    
+                    # Track or reorder buttons
+                    col1, col2 = st.columns(2)
+                    if col1.button("Track Shipment", key=f"track_{order_id}"):
+                        st.info(f"Tracking information for order {order_id}: {order_details['status']}")
+                    
+                    if col2.button("Reorder", key=f"reorder_{order_id}"):
+                        st.info("This would add all items to cart in a real implementation.")
+        else:
+            st.info("You don't have any orders yet. Start shopping to see your order history here!")
 
 if __name__ == "__main__":
     main() 
