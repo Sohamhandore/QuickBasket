@@ -8,6 +8,9 @@ import numpy as np
 import re
 import os
 import time
+import folium
+from streamlit_folium import st_folium
+import random
 
 # Initialize API Manager
 api_manager = APIManager()
@@ -1979,6 +1982,145 @@ def process_payment(total_amount: float) -> bool:
         st.error(f"Payment processing error: {str(e)}")
         return False
 
+def generate_random_stores(center_lat, center_lng, num_stores=5, radius_km=10):
+    """Generate random store locations within a radius of the center point"""
+    if 'store_locations' not in st.session_state:
+        stores = []
+        for i in range(num_stores):
+            # Convert radius from km to degrees (approximate)
+            radius_lat = radius_km / 111  # 1 degree latitude = 111 km
+            radius_lng = radius_km / (111 * abs(center_lat / 90))  # Adjust for latitude
+            
+            # Generate random offset
+            lat = center_lat + random.uniform(-radius_lat, radius_lat)
+            lng = center_lng + random.uniform(-radius_lng, radius_lng)
+            
+            store_name = f"Quick Basket Store #{i+1}"
+            store_type = random.choice(["Flagship Store", "Express Store", "Outlet Store"])
+            stores.append({
+                "name": store_name,
+                "type": store_type,
+                "location": [lat, lng],
+                "features": random.sample([
+                    "Nike Collection", 
+                    "Adidas Collection", 
+                    "Puma Collection",
+                    "Click & Collect",
+                    "Shoe Fitting",
+                    "Express Delivery"
+                ], k=3)
+            })
+        st.session_state.store_locations = stores
+    return st.session_state.store_locations
+
+def show_store_map():
+    """Display the store locations map"""
+    st.header("🏪 Quick Basket Store Locations")
+    
+    # Add description
+    st.markdown("""
+    Find our stores across Mumbai. Each marker shows a store location with its features and services.
+    - 🔴 Red marker: Quick Basket HQ
+    - 🔵 Blue markers: Store locations
+    - 🟢 Green circle: Delivery zone (10km radius)
+    """)
+    
+    # Mumbai coordinates
+    mumbai_center = [19.0760, 72.8777]
+    
+    # Create two columns for map and store list
+    map_col, info_col = st.columns([2, 1])
+    
+    with map_col:
+        # Get store locations (using session state to prevent regeneration)
+        stores = generate_random_stores(
+            center_lat=mumbai_center[0],
+            center_lng=mumbai_center[1],
+            num_stores=8,
+            radius_km=10
+        )
+        
+        # Create the base map
+        m = folium.Map(location=mumbai_center, zoom_start=12)
+        
+        # Add HQ marker
+        folium.Marker(
+            mumbai_center,
+            popup="Quick Basket HQ - Mumbai",
+            icon=folium.Icon(color='red', icon='info-sign')
+        ).add_to(m)
+        
+        # Add store markers with custom icons and popups
+        for store in stores:
+            popup_html = f"""
+            <div style='width: 200px'>
+                <h4>{store['name']}</h4>
+                <p><strong>Type:</strong> {store['type']}</p>
+                <p><strong>Features:</strong></p>
+                <ul>
+                    {''.join(f'<li>{feature}</li>' for feature in store['features'])}
+                </ul>
+            </div>
+            """
+            
+            folium.Marker(
+                store['location'],
+                popup=folium.Popup(popup_html, max_width=300),
+                icon=folium.Icon(
+                    color='blue',
+                    icon='shopping-cart',
+                    prefix='fa'
+                )
+            ).add_to(m)
+        
+        # Add delivery radius
+        folium.Circle(
+            mumbai_center,
+            radius=10000,  # 10km in meters
+            color='green',
+            fill=True,
+            popup='Delivery Zone'
+        ).add_to(m)
+        
+        # Display the map
+        st_folium(m, width=None, height=500, key="store_map")
+    
+    with info_col:
+        # Display store list
+        st.subheader("📍 Store Directory")
+        
+        # Add search box for stores
+        search = st.text_input("🔍 Search stores by name or type", key="store_search")
+        
+        # Filter stores based on search
+        filtered_stores = stores
+        if search:
+            search_lower = search.lower()
+            filtered_stores = [
+                store for store in stores
+                if search_lower in store['name'].lower() or 
+                search_lower in store['type'].lower() or
+                any(search_lower in feature.lower() for feature in store['features'])
+            ]
+        
+        # Display filtered stores
+        for store in filtered_stores:
+            with st.expander(f"📍 {store['name']}", expanded=False):
+                st.markdown(f"**Type:** {store['type']}")
+                st.markdown("**Features:**")
+                for feature in store['features']:
+                    st.markdown(f"- {feature}")
+                st.markdown(f"**Location:** {store['location'][0]:.4f}, {store['location'][1]:.4f}")
+                
+                # Add directions button (this would link to Google Maps in a real implementation)
+                if st.button("🗺️ Get Directions", key=f"directions_{store['name']}"):
+                    maps_url = f"https://www.google.com/maps/search/?api=1&query={store['location'][0]},{store['location'][1]}"
+                    st.markdown(f"[Open in Google Maps]({maps_url})")
+                    
+        # Show message if no stores found
+        if not filtered_stores:
+            st.warning("No stores found matching your search criteria.")
+
 def main():
     # Initialize session state
     init_session_state()
@@ -2089,257 +2231,270 @@ def main():
     st.markdown("<h1 class='title-text'>Quick Basket Customer Support</h1>", unsafe_allow_html=True)
     st.markdown("<p class='subtitle-text'>Your Fast, Friendly, and Frugal shopping assistant is here to help!</p>", unsafe_allow_html=True)
     
-    # Emergency Reset Button - placed at the top for easy access
-    col1, col2, col3 = st.columns([1, 4, 3])
-    if col1.button("🔄 RESET", key="emergency_reset", help="Reset chat history"):
-        # Complete reset of the chat
-        st.session_state.chat_history = []
-        st.session_state.last_input = ""
-        st.session_state.css_cleaned = True
-        st.success("Chat completely reset!")
-        st.rerun()
+    # Add View Stores button in a prominent location
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if st.button("🏪 View Store Locations", key="view_stores_btn", help="Click to see our store locations on the map"):
+            st.session_state.show_map = True
     
-    # Emergency note if CSS content is detected in chat history - REMOVED
-    
-    # Tabs for different sections
-    chat_tab, catalog_tab, size_guide_tab, orders_tab = st.tabs(["💬 Chat", "👟 Product Catalog", "📏 Size Guide", "📦 Your Orders"])
-    
-    with chat_tab:
-        # Model initialization
-        if st.session_state.classifier is None:
-            with st.spinner("🔄 Setting up the assistant..."):
-                df = load_data()
-                if df is not None:
-                    classifier = train_model(df)
-                    if classifier is not None:
-                        st.session_state.classifier = classifier
-                        st.success("✅ Ready to assist you!")
+    # Show map if button was clicked
+    if 'show_map' in st.session_state and st.session_state.show_map:
+        # Add navigation buttons at the top
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col1:
+            if st.button("⬅️ Go Back to Main Page", key="back_btn", use_container_width=True):
+                st.session_state.show_map = False
+                st.rerun()
+        with col3:
+            if st.button("❌ Close Map", key="close_map_btn", use_container_width=True):
+                st.session_state.show_map = False
+                st.rerun()
+        
+        # Add a separator
+        st.markdown("---")
+        
+        # Show the map
+        show_store_map()
+    else:
+        # Tabs for different sections
+        chat_tab, catalog_tab, size_guide_tab, orders_tab = st.tabs(["💬 Chat", "👟 Product Catalog", "📏 Size Guide", "📦 Your Orders"])
+        
+        with chat_tab:
+            # Model initialization
+            if st.session_state.classifier is None:
+                with st.spinner("🔄 Setting up the assistant..."):
+                    df = load_data()
+                    if df is not None:
+                        classifier = train_model(df)
+                        if classifier is not None:
+                            st.session_state.classifier = classifier
+                            st.success("✅ Ready to assist you!")
+                        else:
+                            st.error("❌ Failed to train the assistant.")
                     else:
-                        st.error("❌ Failed to train the assistant.")
-                else:
-                    st.error("❌ Failed to load training data.")
-        
-        # Chat interface
-        st.markdown("### 💬 Chat with our Quick AI assistant")
-        
-        # Display chat history
-        for message in st.session_state.chat_history:
-            if message['role'] == 'user':
-                st.markdown(f"""
-                    <div class='chat-message user'>
-                        <div class='content'>
-                            <strong>You:</strong> {message['content']}
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-            else:
-                st.markdown(f"""
-                    <div class='chat-message assistant'>
-                        <div class='content'>
-                            <strong>Assistant:</strong> {message['content']}
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-        
-        # User input field
-        with st.container():
-            user_input = st.text_input("Type your message:", key="user_input", placeholder="Ask me about products, orders, or stores...")
-        
-        # Process user input
-        if user_input and user_input != st.session_state.last_input:
-            # Check if input appears to be CSS code
-            if is_css_content(user_input):
-                st.session_state.last_input = user_input  # Mark as processed
-                handle_css_message(user_input)
-                st.rerun()
-            else:
-                # Update session state
-                st.session_state.last_input = user_input
-                
-                # Add user message to chat history
-                st.session_state.chat_history.append({'role': 'user', 'content': user_input})
-                
-                # Generate response
-                if st.session_state.classifier is not None:
-                    response = generate_response(user_input, st.session_state.classifier)
-                    
-                    # Check if response contains CSS content
-                    if is_css_content(response):
-                        # Replace with a safe message
-                        response = "I generated a response with styling information, but I'll omit it to avoid display issues. Please try asking in a different way."
-                    
-                    # Add assistant message to chat history
-                    st.session_state.chat_history.append({'role': 'assistant', 'content': response})
-                
-                # Rerun to update the UI
-                st.rerun()
-    
-    # Product catalog tab
-    with catalog_tab:
-        st.markdown("### 👟 Browse Our Products")
-        
-        # Show API Status
-        st.sidebar.markdown("### API Status")
-        
-        # Check Nike API
-        try:
-            nike_products = api_manager.nike.get_products(limit=1)
-            st.sidebar.success("✅ Nike API Connected")
-        except Exception as e:
-            st.sidebar.warning("⚠️ Nike API: Using Mock Data")
+                        st.error("❌ Failed to load training data.")
             
-        # Check Adidas API
-        try:
-            adidas_products = api_manager.adidas.get_products(limit=1)
-            st.sidebar.success("✅ Adidas API Connected")
-        except Exception as e:
-            st.sidebar.warning("⚠️ Adidas API: Using Mock Data")
+            # Chat interface
+            st.markdown("### 💬 Chat with our Quick AI assistant")
             
-        # Check Puma API
-        try:
-            puma_products = api_manager.puma.get_products(limit=1)
-            st.sidebar.success("✅ Puma API Connected")
-        except Exception as e:
-            st.sidebar.warning("⚠️ Puma API: Using Mock Data")
-            
-        # Check Google Maps API
-        try:
-            maps_test = api_manager.google_maps.find_nearby_stores(40.7128, -74.0060)
-            st.sidebar.success("✅ Google Maps API Connected")
-        except Exception as e:
-            st.sidebar.warning("⚠️ Google Maps API: Using Mock Data")
-            
-        # Check Google Pay API
-        try:
-            pay_test = api_manager.google_pay.create_payment_token(1.00)
-            st.sidebar.success("✅ Google Pay API Connected")
-        except Exception as e:
-            st.sidebar.warning("⚠️ Google Pay API: Using Mock Data")
-
-        # Filter options
-        col1, col2, col3 = st.columns(3)
-        brand_filter = col1.selectbox("Brand", ["All"] + list({brand.capitalize() for brand in st.session_state.product_database.keys()}))
-        price_range = col2.slider("Price Range", 0, 200, (0, 200))
-        show_in_stock_only = col3.checkbox("In Stock Only", True)
-
-        # Show data source
-        st.info("🔄 Currently using mock data for development. Connect real API keys in .env file for live data.")
-
-        # Display products in a grid
-        st.markdown("#### Featured Products")
-        
-        # Get all products that match the filters
-        filtered_products = []
-        
-        for brand, models in st.session_state.product_database.items():
-            if brand_filter == "All" or brand.capitalize() == brand_filter:
-                for model_name, details in models.items():
-                    if price_range[0] <= details["price"] <= price_range[1]:
-                        if not show_in_stock_only or details["in_stock"]:
-                            filtered_products.append({
-                                "brand": brand.capitalize(),
-                                "model": model_name,
-                                "details": details
-                            })
-        
-        # Display products in rows of 3
-        num_products = len(filtered_products)
-        rows = (num_products + 2) // 3  # Ceiling division
-        
-        for row in range(rows):
-            cols = st.columns(3)
-            for col_idx in range(3):
-                product_idx = row * 3 + col_idx
-                if product_idx < num_products:
-                    product = filtered_products[product_idx]
-                    
-                    # Product card with HTML
-                    cols[col_idx].markdown(f"""
-                        <div class="product-card">
-                            <img src="{product['details']['image']}" alt="{product['brand']} {product['model']}" class="product-image">
-                            <div class="product-info">
-                                <div class="product-title">{product['brand']} {product['model']}</div>
-                                <div class="product-price">${product['details']['price']}</div>
-                                <div class="product-description">{product['details']['description']}</div>
+            # Display chat history
+            for message in st.session_state.chat_history:
+                if message['role'] == 'user':
+                    st.markdown(f"""
+                        <div class='chat-message user'>
+                            <div class='content'>
+                                <strong>You:</strong> {message['content']}
                             </div>
                         </div>
-                    """, unsafe_allow_html=True)
+                        """, unsafe_allow_html=True)
+                else:
+                    st.markdown(f"""
+                        <div class='chat-message assistant'>
+                            <div class='content'>
+                                <strong>Assistant:</strong> {message['content']}
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+            
+            # User input field
+            with st.container():
+                user_input = st.text_input("Type your message:", key="user_input", placeholder="Ask me about products, orders, or stores...")
+            
+            # Process user input
+            if user_input and user_input != st.session_state.last_input:
+                # Check if input appears to be CSS code
+                if is_css_content(user_input):
+                    st.session_state.last_input = user_input  # Mark as processed
+                    handle_css_message(user_input)
+                    st.rerun()
+                else:
+                    # Update session state
+                    st.session_state.last_input = user_input
                     
-                    # Add to cart button
-                    if product['details']['in_stock']:
-                        # Size and color selections
-                        size_options = [f"Size {size}" for size in product['details']['sizes']]
-                        color_options = [color.capitalize() for color in product['details']['colors']]
+                    # Add user message to chat history
+                    st.session_state.chat_history.append({'role': 'user', 'content': user_input})
+                    
+                    # Generate response
+                    if st.session_state.classifier is not None:
+                        response = generate_response(user_input, st.session_state.classifier)
                         
-                        selected_size = cols[col_idx].selectbox(
-                            "Size", 
-                            size_options,
-                            key=f"size_{product['brand']}_{product['model']}"
-                        )
+                        # Check if response contains CSS content
+                        if is_css_content(response):
+                            # Replace with a safe message
+                            response = "I generated a response with styling information, but I'll omit it to avoid display issues. Please try asking in a different way."
                         
-                        selected_color = cols[col_idx].selectbox(
-                            "Color", 
-                            color_options,
-                            key=f"color_{product['brand']}_{product['model']}"
-                        )
+                        # Add assistant message to chat history
+                        st.session_state.chat_history.append({'role': 'assistant', 'content': response})
+                    
+                    # Rerun to update the UI
+                    st.rerun()
+        
+        # Product catalog tab
+        with catalog_tab:
+            st.markdown("### 👟 Browse Our Products")
+            
+            # Show API Status
+            st.sidebar.markdown("### API Status")
+            
+            # Check Nike API
+            try:
+                nike_products = api_manager.nike.get_products(limit=1)
+                st.sidebar.success("✅ Nike API Connected")
+            except Exception as e:
+                st.sidebar.warning("⚠️ Nike API: Using Mock Data")
+                
+            # Check Adidas API
+            try:
+                adidas_products = api_manager.adidas.get_products(limit=1)
+                st.sidebar.success("✅ Adidas API Connected")
+            except Exception as e:
+                st.sidebar.warning("⚠️ Adidas API: Using Mock Data")
+                
+            # Check Puma API
+            try:
+                puma_products = api_manager.puma.get_products(limit=1)
+                st.sidebar.success("✅ Puma API Connected")
+            except Exception as e:
+                st.sidebar.warning("⚠️ Puma API: Using Mock Data")
+                
+            # Check Google Maps API
+            try:
+                maps_test = api_manager.google_maps.find_nearby_stores(40.7128, -74.0060)
+                st.sidebar.success("✅ Google Maps API Connected")
+            except Exception as e:
+                st.sidebar.warning("⚠️ Google Maps API: Using Mock Data")
+                
+            # Check Google Pay API
+            try:
+                pay_test = api_manager.google_pay.create_payment_token(1.00)
+                st.sidebar.success("✅ Google Pay API Connected")
+            except Exception as e:
+                st.sidebar.warning("⚠️ Google Pay API: Using Mock Data")
+
+            # Filter options
+            col1, col2, col3 = st.columns(3)
+            brand_filter = col1.selectbox("Brand", ["All"] + list({brand.capitalize() for brand in st.session_state.product_database.keys()}))
+            price_range = col2.slider("Price Range", 0, 200, (0, 200))
+            show_in_stock_only = col3.checkbox("In Stock Only", True)
+
+            # Show data source
+            st.info("🔄 Currently using mock data for development. Connect real API keys in .env file for live data.")
+
+            # Display products in a grid
+            st.markdown("#### Featured Products")
+            
+            # Get all products that match the filters
+            filtered_products = []
+            
+            for brand, models in st.session_state.product_database.items():
+                if brand_filter == "All" or brand.capitalize() == brand_filter:
+                    for model_name, details in models.items():
+                        if price_range[0] <= details["price"] <= price_range[1]:
+                            if not show_in_stock_only or details["in_stock"]:
+                                filtered_products.append({
+                                    "brand": brand.capitalize(),
+                                    "model": model_name,
+                                    "details": details
+                                })
+            
+            # Display products in rows of 3
+            num_products = len(filtered_products)
+            rows = (num_products + 2) // 3  # Ceiling division
+            
+            for row in range(rows):
+                cols = st.columns(3)
+                for col_idx in range(3):
+                    product_idx = row * 3 + col_idx
+                    if product_idx < num_products:
+                        product = filtered_products[product_idx]
                         
-                        # Extract numeric size value
-                        size_value = float(selected_size.replace("Size ", ""))
-                        color_value = selected_color.lower()
+                        # Product card with HTML
+                        cols[col_idx].markdown(f"""
+                            <div class="product-card">
+                                <img src="{product['details']['image']}" alt="{product['brand']} {product['model']}" class="product-image">
+                                <div class="product-info">
+                                    <div class="product-title">{product['brand']} {product['model']}</div>
+                                    <div class="product-price">${product['details']['price']}</div>
+                                    <div class="product-description">{product['details']['description']}</div>
+                                </div>
+                            </div>
+                        """, unsafe_allow_html=True)
                         
-                        if cols[col_idx].button("Add to Cart", key=f"add_{product['brand']}_{product['model']}"):
-                            success, message = add_to_cart(
-                                product['brand'],
-                                product['model'],
-                                size_value,
-                                color_value
+                        # Add to cart button
+                        if product['details']['in_stock']:
+                            # Size and color selections
+                            size_options = [f"Size {size}" for size in product['details']['sizes']]
+                            color_options = [color.capitalize() for color in product['details']['colors']]
+                            
+                            selected_size = cols[col_idx].selectbox(
+                                "Size", 
+                                size_options,
+                                key=f"size_{product['brand']}_{product['model']}"
                             )
                             
-                            if success:
-                                st.success("Product added to cart!")
+                            selected_color = cols[col_idx].selectbox(
+                                "Color", 
+                                color_options,
+                                key=f"color_{product['brand']}_{product['model']}"
+                            )
+                            
+                            # Extract numeric size value
+                            size_value = float(selected_size.replace("Size ", ""))
+                            color_value = selected_color.lower()
+                            
+                            if cols[col_idx].button("Add to Cart", key=f"add_{product['brand']}_{product['model']}"):
+                                success, message = add_to_cart(
+                                    product['brand'],
+                                    product['model'],
+                                    size_value,
+                                    color_value
+                                )
                                 
-                                # Add to viewed products
-                                product_key = f"{product['brand']} {product['model']}"
-                                if product_key not in st.session_state.user_preferences['viewed_products']:
-                                    st.session_state.user_preferences['viewed_products'].append(product_key)
-                                
-                                st.rerun()
-                            else:
-                                st.error(message)
-                    else:
-                        cols[col_idx].markdown("<span style='color: red;'>Out of Stock</span>", unsafe_allow_html=True)
-    
-    # Size guide tab
-    with size_guide_tab:
-        show_size_guide()
-    
-    # Orders tab
-    with orders_tab:
-        st.markdown("### 📦 Your Orders")
+                                if success:
+                                    st.success("Product added to cart!")
+                                    
+                                    # Add to viewed products
+                                    product_key = f"{product['brand']} {product['model']}"
+                                    if product_key not in st.session_state.user_preferences['viewed_products']:
+                                        st.session_state.user_preferences['viewed_products'].append(product_key)
+                                    
+                                    st.rerun()
+                                else:
+                                    st.error(message)
+                        else:
+                            cols[col_idx].markdown("<span style='color: red;'>Out of Stock</span>", unsafe_allow_html=True)
         
-        # Show sample order history
-        if st.session_state.order_database:
-            for order_id, order_details in st.session_state.order_database.items():
-                with st.expander(f"Order #{order_id} - {order_details['date']}"):
-                    st.markdown(f"**Status:** {order_details['status']}")
-                    st.markdown(f"**Delivery:** {order_details['delivery_date']}")
-                    st.markdown(f"**Ship to:** {order_details['address']}")
-                    
-                    st.markdown("**Items:**")
-                    for item in order_details['items']:
-                        st.markdown(f"• {item}")
-                    
-                    st.markdown(f"**Total:** ${order_details['total']}")
-                    
-                    # Track or reorder buttons
-                    col1, col2 = st.columns(2)
-                    if col1.button("Track Shipment", key=f"track_{order_id}"):
-                        st.info(f"Tracking information for order {order_id}: {order_details['status']}")
-                    
-                    if col2.button("Reorder", key=f"reorder_{order_id}"):
-                        st.info("This would add all items to cart in a real implementation.")
-        else:
-            st.info("You don't have any orders yet. Start shopping to see your order history here!")
+        # Size guide tab
+        with size_guide_tab:
+            show_size_guide()
+        
+        # Orders tab
+        with orders_tab:
+            st.markdown("### 📦 Your Orders")
+            
+            # Show sample order history
+            if st.session_state.order_database:
+                for order_id, order_details in st.session_state.order_database.items():
+                    with st.expander(f"Order #{order_id} - {order_details['date']}"):
+                        st.markdown(f"**Status:** {order_details['status']}")
+                        st.markdown(f"**Delivery:** {order_details['delivery_date']}")
+                        st.markdown(f"**Ship to:** {order_details['address']}")
+                        
+                        st.markdown("**Items:**")
+                        for item in order_details['items']:
+                            st.markdown(f"• {item}")
+                        
+                        st.markdown(f"**Total:** ${order_details['total']}")
+                        
+                        # Track or reorder buttons
+                        col1, col2 = st.columns(2)
+                        if col1.button("Track Shipment", key=f"track_{order_id}"):
+                            st.info(f"Tracking information for order {order_id}: {order_details['status']}")
+                        
+                        if col2.button("Reorder", key=f"reorder_{order_id}"):
+                            st.info("This would add all items to cart in a real implementation.")
+            else:
+                st.info("You don't have any orders yet. Start shopping to see your order history here!")
 
 if __name__ == "__main__":
     main() 
