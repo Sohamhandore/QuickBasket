@@ -1,4 +1,5 @@
 import streamlit as st
+from api_integrations import APIManager
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
@@ -7,6 +8,9 @@ import numpy as np
 import re
 import os
 import time
+
+# Initialize API Manager
+api_manager = APIManager()
 
 # Set page config
 st.set_page_config(
@@ -480,79 +484,49 @@ def init_session_state():
     if 'last_input' not in st.session_state:
         st.session_state.last_input = ""
     if 'product_database' not in st.session_state:
-        # Create a mock product database with images
-        st.session_state.product_database = {
-            "nike": {
-                "Air Max": {
-                    "price": 120, 
-                    "sizes": [7, 8, 9, 10, 11], 
-                    "colors": ["black", "white", "red"], 
-                    "in_stock": True,
-                    "image": "https://static.nike.com/a/images/t_PDP_1280_v1/f_auto,q_auto:eco/a7854567-0321-4590-9b3f-d89f10e5d69a/air-max-90-shoes-N7Tbw0.png",
-                    "description": "Iconic cushioning and retro appeal. The Nike Air Max delivers all-day comfort with a visible Max Air unit."
-                },
-                "React": {
-                    "price": 130, 
-                    "sizes": [8, 9, 10], 
-                    "colors": ["blue", "gray"], 
-                    "in_stock": True,
-                    "image": "https://static.nike.com/a/images/t_PDP_1280_v1/f_auto,q_auto:eco/48ffb562-9736-4373-9f5a-73868a3b0d79/react-infinity-run-flyknit-mens-running-shoe-RQ484B.png",
-                    "description": "The Nike React features soft, responsive foam for smooth transitions and enhanced comfort on every run."
-                },
-                "Dunk Low": {
-                    "price": 100, 
-                    "sizes": [7, 8, 9], 
-                    "colors": ["green", "yellow"], 
-                    "in_stock": False,
-                    "image": "https://static.nike.com/a/images/t_PDP_1280_v1/f_auto,q_auto:eco/344ff3e1-d944-499e-be62-5259a39f1845/dunk-low-shoes-26CGQ7.png",
-                    "description": "The Nike Dunk Low stays true to its roots with a padded, low-cut collar and iconic design details."
+        # Get products from API
+        products = api_manager.get_all_products()
+        st.session_state.product_database = {}
+        
+        # Process Nike products
+        if 'nike' in products:
+            st.session_state.product_database['nike'] = {}
+            for product in products['nike'].get('products', []):
+                st.session_state.product_database['nike'][product['name']] = {
+                    'price': product['price'],
+                    'sizes': product['sizes'],
+                    'colors': product['colors'],
+                    'in_stock': product['in_stock'],
+                    'image': product.get('image', 'default_image_url'),
+                    'description': product.get('description', f"The {product['name']} delivers comfort and style.")
                 }
-            },
-            "adidas": {
-                "Ultraboost": {
-                    "price": 180, 
-                    "sizes": [7, 8, 9, 10, 11, 12], 
-                    "colors": ["black", "white", "blue"], 
-                    "in_stock": True,
-                    "image": "https://assets.adidas.com/images/w_600,f_auto,q_auto/994ad7862f8b4520a647ad7800c4d61c_9366/Ultraboost_22_Shoes_Black_GZ0127_01_standard.jpg",
-                    "description": "Experience epic energy with Adidas Ultraboost, featuring responsive cushioning and a supportive fit."
-                },
-                "Stan Smith": {
-                    "price": 80, 
-                    "sizes": [8, 9, 10, 11], 
-                    "colors": ["white", "green"], 
-                    "in_stock": True,
-                    "image": "https://assets.adidas.com/images/w_600,f_auto,q_auto/a81eff5e6bd2435c900fad1500aad828_9366/Stan_Smith_Shoes_White_GV7775_01_standard.jpg",
-                    "description": "The Adidas Stan Smith is a timeless tennis shoe with clean lines and minimalist styling."
-                },
-                "Gazelle": {
-                    "price": 90, 
-                    "sizes": [7, 8, 9], 
-                    "colors": ["blue", "red", "black"], 
-                    "in_stock": True,
-                    "image": "https://assets.adidas.com/images/w_600,f_auto,q_auto/b3d97ded8430413fab3daa3100f3f5de_9366/Gazelle_Shoes_Blue_BB5478_01_standard.jpg",
-                    "description": "The iconic Adidas Gazelle features a suede upper and classic 3-Stripes design."
+        
+        # Process Adidas products
+        if 'adidas' in products:
+            st.session_state.product_database['adidas'] = {}
+            for product in products['adidas'].get('products', []):
+                st.session_state.product_database['adidas'][product['name']] = {
+                    'price': product['price'],
+                    'sizes': product['sizes'],
+                    'colors': product['colors'],
+                    'in_stock': product['in_stock'],
+                    'image': product.get('image', 'default_image_url'),
+                    'description': product.get('description', f"The {product['name']} offers premium performance.")
                 }
-            },
-            "puma": {
-                "RS-X": {
-                    "price": 110, 
-                    "sizes": [8, 9, 10, 11], 
-                    "colors": ["white", "black", "blue"], 
-                    "in_stock": True,
-                    "image": "https://images.puma.com/image/upload/f_auto,q_auto,b_rgb:fafafa,w_600,h_600/global/380562/01/sv01/fnd/IND/fmt/png/RS-X-Reinvention-Sneakers",
-                    "description": "Puma RS-X features bold design and outstanding cushioning for street-ready style."
-                },
-                "Suede": {
-                    "price": 70, 
-                    "sizes": [7, 8, 9, 10], 
-                    "colors": ["black", "blue", "red"], 
-                    "in_stock": True,
-                    "image": "https://images.puma.com/image/upload/f_auto,q_auto,b_rgb:fafafa,w_600,h_600/global/374915/01/sv01/fnd/IND/fmt/png/Suede-Classic-XXI-Sneakers",
-                    "description": "The Puma Suede is a street style icon with a grippy rubber sole and soft suede upper."
+        
+        # Process Puma products
+        if 'puma' in products:
+            st.session_state.product_database['puma'] = {}
+            for product in products['puma'].get('products', []):
+                st.session_state.product_database['puma'][product['name']] = {
+                    'price': product['price'],
+                    'sizes': product['sizes'],
+                    'colors': product['colors'],
+                    'in_stock': product['in_stock'],
+                    'image': product.get('image', 'default_image_url'),
+                    'description': product.get('description', f"The {product['name']} combines style and comfort.")
                 }
-            }
-        }
+
     if 'order_database' not in st.session_state:
         # Create a mock order database
         st.session_state.order_database = {
@@ -582,30 +556,36 @@ def init_session_state():
             }
         }
     if 'store_locations' not in st.session_state:
-        # Create mock store locations
-        st.session_state.store_locations = [
-            {
-                "name": "Quick Basket City Center",
-                "address": "123 Main Street, Downtown",
-                "hours": "9 AM - 9 PM (Mon-Sat), 10 AM - 6 PM (Sun)",
-                "phone": "555-123-4567",
-                "features": ["Nike Shop-in-shop", "Shoe fitting service", "Click & Collect"]
-            },
-            {
-                "name": "Quick Basket Mall Store",
-                "address": "456 Market Square, Metro Mall",
-                "hours": "10 AM - 10 PM (Mon-Sun)",
-                "phone": "555-765-4321",
-                "features": ["Adidas Shop-in-shop", "Running analysis", "Personal shopping"]
-            },
-            {
-                "name": "Quick Basket Outlet",
-                "address": "789 Shopping Plaza, near Central Station",
-                "hours": "9 AM - 8 PM (Mon-Sat), Closed on Sun",
-                "phone": "555-987-6543",
-                "features": ["Clearance items", "Bulk purchase discounts", "Large parking"]
-            }
-        ]
+        # Use Google Maps API to get store locations
+        stores = api_manager.google_maps.find_nearby_stores(
+            latitude=40.7128,  # Default to NYC coordinates
+            longitude=-74.0060
+        )
+        
+        if 'results' in stores:
+            st.session_state.store_locations = []
+            for store in stores['results']:
+                store_details = api_manager.google_maps.get_store_details(store['place_id'])
+                if 'result' in store_details:
+                    details = store_details['result']
+                    st.session_state.store_locations.append({
+                        "name": details.get('name', 'Quick Basket Store'),
+                        "address": details.get('formatted_address', 'Address not available'),
+                        "hours": details.get('opening_hours', {}).get('weekday_text', 'Hours not available'),
+                        "phone": details.get('formatted_phone_number', 'Phone not available'),
+                        "features": ["Click & Collect", "Shoe fitting service"]  # Default features
+                    })
+        else:
+            # Use default store locations if API fails
+            st.session_state.store_locations = [
+                {
+                    "name": "Quick Basket City Center",
+                    "address": "123 Main Street, Downtown",
+                    "hours": "9 AM - 9 PM (Mon-Sat), 10 AM - 6 PM (Sun)",
+                    "phone": "555-123-4567",
+                    "features": ["Nike Shop-in-shop", "Shoe fitting service", "Click & Collect"]
+                }
+            ]
     # New session state variables for advanced features
     if 'shopping_cart' not in st.session_state:
         st.session_state.shopping_cart = []
@@ -1982,6 +1962,23 @@ def handle_css_message(css_text):
     st.session_state.chat_history.append({'role': 'assistant', 'content': response})
     return response
 
+# Process payment using Google Pay
+def process_payment(total_amount: float) -> bool:
+    try:
+        # Create payment token
+        payment_token = api_manager.google_pay.create_payment_token(amount=total_amount)
+        
+        # Process payment
+        payment_result = api_manager.google_pay.process_payment(
+            payment_token=payment_token.get('token', ''),
+            amount=total_amount
+        )
+        
+        return payment_result.get('status') == 'success'
+    except Exception as e:
+        st.error(f"Payment processing error: {str(e)}")
+        return False
+
 def main():
     # Initialize session state
     init_session_state()
@@ -2181,12 +2178,53 @@ def main():
     with catalog_tab:
         st.markdown("### 👟 Browse Our Products")
         
+        # Show API Status
+        st.sidebar.markdown("### API Status")
+        
+        # Check Nike API
+        try:
+            nike_products = api_manager.nike.get_products(limit=1)
+            st.sidebar.success("✅ Nike API Connected")
+        except Exception as e:
+            st.sidebar.warning("⚠️ Nike API: Using Mock Data")
+            
+        # Check Adidas API
+        try:
+            adidas_products = api_manager.adidas.get_products(limit=1)
+            st.sidebar.success("✅ Adidas API Connected")
+        except Exception as e:
+            st.sidebar.warning("⚠️ Adidas API: Using Mock Data")
+            
+        # Check Puma API
+        try:
+            puma_products = api_manager.puma.get_products(limit=1)
+            st.sidebar.success("✅ Puma API Connected")
+        except Exception as e:
+            st.sidebar.warning("⚠️ Puma API: Using Mock Data")
+            
+        # Check Google Maps API
+        try:
+            maps_test = api_manager.google_maps.find_nearby_stores(40.7128, -74.0060)
+            st.sidebar.success("✅ Google Maps API Connected")
+        except Exception as e:
+            st.sidebar.warning("⚠️ Google Maps API: Using Mock Data")
+            
+        # Check Google Pay API
+        try:
+            pay_test = api_manager.google_pay.create_payment_token(1.00)
+            st.sidebar.success("✅ Google Pay API Connected")
+        except Exception as e:
+            st.sidebar.warning("⚠️ Google Pay API: Using Mock Data")
+
         # Filter options
         col1, col2, col3 = st.columns(3)
         brand_filter = col1.selectbox("Brand", ["All"] + list({brand.capitalize() for brand in st.session_state.product_database.keys()}))
         price_range = col2.slider("Price Range", 0, 200, (0, 200))
         show_in_stock_only = col3.checkbox("In Stock Only", True)
-        
+
+        # Show data source
+        st.info("🔄 Currently using mock data for development. Connect real API keys in .env file for live data.")
+
         # Display products in a grid
         st.markdown("#### Featured Products")
         
